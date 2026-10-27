@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   openGraph: { title: 'rePlay', description: 'Mira tu movimiento unos segundos después. Cámara local para cualquier deporte.', locale: 'es_ES', type: 'website', images: [{ url: '/og.png?v=athlete-1', width: 1200, height: 630 }] },
   twitter: { card: 'summary_large_image', images: ['/og.png?v=athlete-1'] },
 };
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#24542b' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#1c1c1c' };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="es" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('voley-delay:onboarding:v1')===null)document.documentElement.dataset.onboarding='pending'}catch(e){}" }} /></head><body>{children}<Analytics /><SpeedInsights /></body></html>;
 }

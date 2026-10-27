@@ -77,20 +77,16 @@ export function DelayApp() {
 
   return <main>
     <div className={`setup ${active ? 'hidden' : ''}`} inert={showOnboarding}>
-      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button><span className="version-tag">Versión de pruebas</span></div></header>
+      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button></div></header>
       <section className="intro" aria-labelledby="app-title">
         <h1 id="app-title">Revisa tu movimiento<br /><span>unos segundos después.</span></h1>
-        <p className="intro-copy">Coloca el móvil apuntando al ejercicio y elige cuánto tiempo después quieres verlo en pantalla.</p>
       </section>
       <section className="configuration" aria-label="Preparar sesión">
         <div className="settings">
           <fieldset><legend>Retraso del vídeo</legend><div className="delay-options">{DELAYS.map(seconds => <button key={seconds} type="button" aria-pressed={delay === seconds} onClick={() => saveDelay(seconds)}>{seconds}<span> s</span></button>)}</div><p className="field-help">Elige el tiempo que necesitas para acercarte a la pantalla.</p></fieldset>
           <label className="quality-label" htmlFor="quality">Calidad del vídeo</label>
           <select id="quality" value={quality} onChange={event => setQuality(Number(event.target.value) as Quality)}>{PROFILES.map((profile, index) => <option value={index} key={profile.label}>{profile.label}{index === 0 ? ' · recomendada' : ''}</option>)}</select>
-          <p className="field-help">Si tu móvil necesita menos carga, elige una calidad inferior.</p>
-          <button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button>
-          <p className="local-note">Sin audio. El vídeo no se guarda.</p>
-        </div>
+          <button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button>        </div>
       </section>
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
       {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}>Instalar aplicación</button></div>}

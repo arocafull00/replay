@@ -1,0 +1,10 @@
+# rePlay
+
+Aplicación web instalable en español para revisar movimientos en cualquier deporte con la cámara del móvil y un retraso de 5, 10, 15, 20 o 30 segundos. Plataforma de referencia: Chrome en Android. iPhone está en evaluación.
+
+El vídeo se procesa en el navegador, sin audio, cuentas, subidas ni grabaciones permanentes. Puede abrirse sin internet tras completar la preparación offline. La captura se detiene al pasar a segundo plano.
+
+## Páginas
+- [Aplicación e instrucciones](/): selector de retraso, inicio de sesión, ayuda de instalación y privacidad.
+
+La compatibilidad y estabilidad se confirman por dispositivo. Esta versión está pendiente de validación física en Android.

@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.git
+test-results
+playwright-report
+tests
+docs
+design
+*.tsbuildinfo
+PRODUCT.md
+DESIGN.md

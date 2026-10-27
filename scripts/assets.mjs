@@ -1,0 +1,12 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import sharp from 'sharp';
+await mkdir('public', { recursive: true });
+const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="108" fill="#24542b"/><g fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M126 144h260v224H126zM256 144v224M126 256h100"/><path d="M316 218v76l-43-27"/></g><circle cx="316" cy="256" r="77" fill="#24542b"/><path d="M271 198a74 74 0 1 1-24 77M248 197v47h47" fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/><path d="M316 215v44l26 18" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/></svg>`;
+await writeFile('public/mark.svg', icon);
+for (const size of [192, 512]) await sharp(Buffer.from(icon)).resize(size, size).png().toFile(`public/icon-${size}.png`);
+const maskable = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#24542b"/><svg x="64" y="64" width="384" height="384" viewBox="0 0 512 512">${icon.replace(/<svg[^>]*>|<\/svg>/g, '')}</svg></svg>`;
+await sharp(Buffer.from(maskable)).png().toFile('public/icon-maskable.png');
+await sharp(Buffer.from(icon)).resize(180).png().toFile('public/apple-touch-icon.png');
+await sharp(Buffer.from(icon)).resize(48).png().toFile('public/favicon.png');
+const og = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#f5f7f5"/><rect x="60" y="60" width="1080" height="510" rx="24" fill="#24542b"/><text x="110" y="215" fill="white" font-family="Arial" font-size="76" font-weight="bold">rePlay</text><text x="110" y="315" fill="white" font-family="Arial" font-size="42">Mira tu movimiento unos segundos después.</text><text x="110" y="465" fill="#daecdd" font-family="Arial" font-size="30">Cámara local · Sin audio · Sin grabaciones guardadas</text></svg>`;
+await sharp(Buffer.from(og)).png().toFile('public/og.png');

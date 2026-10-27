@@ -16,7 +16,9 @@ h1, h2, p { margin: 0; }
 h1, h2 { text-wrap: balance; }
 p { text-wrap: pretty; }
 .hidden { display: none !important; }
-.setup { max-width: 760px; margin: 0 auto; padding: 0 40px 40px; }
+.setup { max-width: 760px; margin: 0 auto; padding: 0 40px; min-height: 100dvh; display: flex; flex-direction: column; }
+.setup-body { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding-bottom: 24px; }
+.start-bar { position: sticky; bottom: 0; padding: 16px 0 max(20px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 24px); }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 104px; border-bottom: 1px solid var(--line); }
 .wordmark { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 750; font-size: 21px; letter-spacing: -.5px; }
 .wordmark img { border-radius: 8px; }
@@ -27,7 +29,7 @@ h1 span { color: var(--muted); }
 .intro-copy { color: var(--muted); max-width: 560px; font-size: 17px; margin-top: 20px; line-height: 1.65; }
 .settings { padding: 4px 0; }
 fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
-legend { font-weight: 700; font-size: 17px; margin-bottom: 14px; }
+legend { font-weight: 700; font-size: 17px; margin: 0 auto 14px; }
 .delay-options { display: flex; gap: 8px; }
 .delay-options button { flex: 1; min-width: 48px; min-height: 56px; border: 1px solid var(--line); background: white; border-radius: 8px; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .delay-options button span { font-size: 14px; font-weight: 400; }
@@ -35,13 +37,13 @@ legend { font-weight: 700; font-size: 17px; margin-bottom: 14px; }
 .delay-options button[aria-pressed=true] { background: var(--signal); border-color: var(--signal); color: var(--ink); }
 .field-help { color: var(--muted); font-size: 13px; margin-top: 9px; }
 .quality-label { display: block; margin: 21px 0 8px; font-size: 14px; font-weight: 650; }
-select { min-height: 48px; width: 100%; background: white; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--ink); }
+select { min-height: 48px; width: 100%; text-align-last: center; background: white; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--ink); }
 .button { min-height: 52px; border: 0; border-radius: 8px; padding: 12px 22px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; font-weight: 650; text-decoration: none; line-height: 1.25; }
 .primary { background: var(--primary); color: white; }
 .primary:hover { background: oklch(.32 0 0); }
 .secondary { border: 1px solid var(--line); background: white; color: var(--ink); }
 .secondary:hover { background: var(--surface); }
-.start-button { margin-top: 24px; width: 100%; font-size: 18px; min-height: 58px; }
+.start-button { width: 100%; font-size: 18px; min-height: 58px; }
 .start-button span { font-size: 15px; }
 .local-note { color: var(--muted); margin-top: 13px; font-size: 12px; text-align: center; }
 .notice { margin-top: 24px; padding: 20px; background: oklch(.96 .03 75); border: 1px solid oklch(.77 .08 75); border-radius: 8px; color: oklch(.30 .05 65); }
@@ -84,7 +86,7 @@ progress::-webkit-progress-bar { background: oklch(.3 0 0); } progress::-webkit-
 .not-found h1 { font-size: 36px; margin: 40px 0 20px; }
 .not-found .button { margin-top: 24px; }
 @media (max-width: 700px) {
-  .setup { padding: 0 22px 28px; }.app-header { min-height: 72px; }.wordmark { font-size: 18px; gap: 9px; }.version-tag { font-size: 11px; padding: 5px 8px; }
+  .setup { padding: 0 22px; }.app-header { min-height: 72px; }.wordmark { font-size: 18px; gap: 9px; }.version-tag { font-size: 11px; padding: 5px 8px; }
   .intro { padding: 26px 0 24px; } h1 { font-size: 30px; letter-spacing: -.9px; }.intro-copy { font-size: 14px; line-height: 1.55; margin-top: 14px; }
   .delay-options { gap: 6px; }.delay-options button { font-size: 20px; }
   .player-controls { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); padding: 12px; gap: 12px; }.player-controls strong { font-size: 14px; }.stop-button { min-width: 108px; padding: 12px; }.player-status { top: max(12px, env(safe-area-inset-top)); left: 12px; font-size: 11px; gap: 8px; }.delay-badge { padding-left: 8px; }

@@ -78,6 +78,7 @@ export function DelayApp() {
   return <main>
     <div className={`setup ${active ? 'hidden' : ''}`} inert={showOnboarding}>
       <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button></div></header>
+      <div className="setup-body">
       <section className="intro" aria-labelledby="app-title">
         <h1 id="app-title">Revisa tu movimiento<br /><span>unos segundos después.</span></h1>
       </section>
@@ -86,11 +87,13 @@ export function DelayApp() {
           <fieldset><legend>Retraso del vídeo</legend><div className="delay-options">{DELAYS.map(seconds => <button key={seconds} type="button" aria-pressed={delay === seconds} onClick={() => saveDelay(seconds)}>{seconds}<span> s</span></button>)}</div><p className="field-help">Elige el tiempo que necesitas para acercarte a la pantalla.</p></fieldset>
           <label className="quality-label" htmlFor="quality">Calidad del vídeo</label>
           <select id="quality" value={quality} onChange={event => setQuality(Number(event.target.value) as Quality)}>{PROFILES.map((profile, index) => <option value={index} key={profile.label}>{profile.label}{index === 0 ? ' · recomendada' : ''}</option>)}</select>
-          <button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button>        </div>
+        </div>
       </section>
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
       {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}>Instalar aplicación</button></div>}
       {metrics && <Diagnostics metrics={metrics} actualQuality={actualQuality} />}
+      </div>
+      <div className="start-bar"><button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button></div>
     </div>
 
     <section className={`player ${active ? 'is-active' : ''}`} aria-label="Sesión de vídeo con retraso" aria-hidden={!active} onPointerDown={showControls} onFocus={showControls}>

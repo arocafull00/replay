@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import './onboarding.css';
-export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://voley-delay.vercel.app');
+export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://replayapp.vercel.app');
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl), title: { default: 'rePlay · Vídeo con retraso para entrenar', template: '%s · rePlay' },
   description: 'Revisa tu movimiento unos segundos después con la cámara de tu móvil. Elige el retraso y repasa cada ejercicio mientras entrenas.',
@@ -13,5 +15,5 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#24542b' };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('voley-delay:onboarding:v1')===null)document.documentElement.dataset.onboarding='pending'}catch(e){}" }} /></head><body>{children}</body></html>;
+  return <html lang="es" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('voley-delay:onboarding:v1')===null)document.documentElement.dataset.onboarding='pending'}catch(e){}" }} /></head><body>{children}<Analytics /><SpeedInsights /></body></html>;
 }

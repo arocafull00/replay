@@ -6,7 +6,7 @@ Para revisar movimientos en cualquier deporte. La marca se escribe **rePlay**. E
 
 **Estado: candidata de pruebas. Pendiente de aceptación en dos Android físicos.** iPhone está en evaluación y no se garantiza su compatibilidad.
 
-Aplicación publicada: https://voley-delay.vercel.app
+Aplicación publicada: https://replayapp.vercel.app
 
 ## Desarrollo
 
@@ -51,7 +51,7 @@ Se conservan tres segundos detrás del cabezal para facilitar la continuidad. La
 
 ## Privacidad y persistencia
 
-Solo se persiste la selección de retraso (`voley-delay:delay:v1`) y la interfaz estática de la PWA. El vídeo permanece en memoria. No se escribe vídeo en Cache Storage, IndexedDB, galería o archivos, ni se envía por red. No hay analítica.
+Solo se persiste la selección de retraso (`voley-delay:delay:v1`) y la interfaz estática de la PWA. El vídeo permanece en memoria. No se escribe vídeo en Cache Storage, IndexedDB, galería o archivos, ni se envía por red. Se usan Vercel Web Analytics y Speed Insights (visitas y métricas de rendimiento anónimas, sin cookies); nunca reciben vídeo.
 
 Los datos de diagnóstico son orientativos y permanecen en la interfaz hasta recargar o comenzar otra sesión. La captura sintética de los tests es un reloj generado, no contenido de cámara del usuario.
 

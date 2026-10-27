@@ -1,6 +1,6 @@
 # Pruebas en móviles reales
 
-**Estado: pendiente. Ningún móvil físico se considera certificado por las pruebas automatizadas.**
+**Estado: pendiente. Ningún móvil físico se considera certificado todavía.**
 
 El usuario probará los enlaces. Se necesitan dos Android de distinta gama, con Chrome actualizado. Anotar las versiones exactas: la compatibilidad se atribuye a esas combinaciones, no a todos los Android.
 

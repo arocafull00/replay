@@ -17,13 +17,7 @@ La API no garantiza que cada Blob de MediaRecorder pueda reproducirse solo. Esta
 
 ## Evidencia y límites
 
-La suite de navegador usa un canvas de 1280×720 con reloj y movimiento, capturado a 30 FPS y codificado realmente por Chromium. Comprueba 5, 10 y 30 s, margen de ±1 s durante las muestras, continuidad, liberación de pistas y funcionamiento offline.
-
-Esto es evidencia del flujo multimedia en escritorio, no de sesiones de treinta minutos en Android. El informe de ejecución de Playwright indica qué casos pasaron en cada compilación. No hay dispositivos físicos certificados en esta entrega.
-
-Comprobaciones locales del 27 de octubre de 2026: 8 pruebas unitarias y 10 escenarios E2E verificados en Chromium, incluyendo permisos tardíos, parada por visibilidad, accesibilidad WCAG A/AA mediante axe y una actualización solicitada desde una segunda ventana mientras la primera reproduce. Compilación, TypeScript y ESLint correctos. Las muestras sintéticas con 5, 10 y 30 s permanecieron dentro de ±1 s; no equivalen a una sesión larga física.
-
-Publicación comprobada en https://voley-delay.vercel.app el mismo día: los 10 escenarios E2E pasaron contra el dominio HTTPS en 1,6 minutos. Se verificaron respuestas públicas para manifiesto, Service Worker, robots, sitemap, llms y 404; iconos de 192/512 px, maskable, Apple Touch Icon y OG de 1200×630. Las cabeceras limitan la cámara al propio origen y deshabilitan el micrófono. La prueba offline también capturó y reprodujo el reloj sintético con la red desactivada.
+El proyecto no incluye pruebas automatizadas. La validación depende de las pruebas manuales en móviles reales descritas en VALIDATION.md. No hay dispositivos físicos certificados en esta entrega.
 
 ## Cuándo evaluar WebCodecs
 

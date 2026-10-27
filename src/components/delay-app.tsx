@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { DelayEngine, type EngineEvent, type EngineState, type Metrics } from '@/lib/video/engine';
 import { DELAYS, isDelay, PROFILES, type DelaySeconds, type Quality } from '@/lib/video/policy';
 import { usePwa } from '@/lib/use-pwa';
+import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
 
 const STORAGE_KEY = 'voley-delay:delay:v1';
 function readDelay(): DelaySeconds { try { const value = Number(localStorage.getItem(STORAGE_KEY)); return isDelay(value) ? value : 10; } catch { return 10; } }
@@ -32,6 +33,9 @@ export function DelayApp() {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = !['ready', 'error'].includes(state);
   const pwa = usePwa(active);
+  const onboardingSeen = useOnboardingSeen();
+  const [guideOpen, setGuideOpen] = useState(false);
+  const showOnboarding = (!onboardingSeen || guideOpen) && !active;
 
   const receive = useCallback((event: EngineEvent) => {
     if (event.type === 'state') { setState(event.state); if (event.state === 'playing') { setBlocked(false); setMessage(''); } }
@@ -72,31 +76,25 @@ export function DelayApp() {
   const waiting = state === 'requesting' || state === 'buffering' || state === 'recovering';
 
   return <main>
-    <div className={`setup ${active ? 'hidden' : ''}`}>
-      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.svg" width={36} height={36} alt="" unoptimized />rePlay</Link><span className="version-tag">Versión de pruebas</span></header>
+    <div className={`setup ${active ? 'hidden' : ''}`} inert={showOnboarding}>
+      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button><span className="version-tag">Versión de pruebas</span></div></header>
       <section className="intro" aria-labelledby="app-title">
-        <p className="context-label">En cada entrenamiento, a tu ritmo</p>
-        <h1 id="app-title">Tu movimiento.<br /><span>Unos segundos después.</span></h1>
-        <p className="intro-copy">Coloca el móvil en un trípode y revisa tus movimientos sin detener el entrenamiento, sea cual sea tu deporte.</p>
+        <h1 id="app-title">Revisa tu movimiento<br /><span>unos segundos después.</span></h1>
+        <p className="intro-copy">Coloca el móvil apuntando al ejercicio y elige cuánto tiempo después quieres verlo en pantalla.</p>
       </section>
       <section className="configuration" aria-label="Preparar sesión">
-        <div className="preview-placeholder" aria-hidden="true"><div className="court"><div className="court-net" /><div className="court-circle">↶<span>{delay} s</span></div></div><p>La cámara se abrirá cuando pulses «Iniciar».</p></div>
         <div className="settings">
-          <fieldset><legend>¿Cuánto tiempo después?</legend><div className="delay-options">{DELAYS.map(seconds => <button key={seconds} type="button" aria-pressed={delay === seconds} onClick={() => saveDelay(seconds)}>{seconds}<span> s</span></button>)}</div><p className="field-help">Diez segundos suelen dar tiempo para acercarte a mirar.</p></fieldset>
-          <label className="quality-label" htmlFor="quality">Calidad de captura</label>
+          <fieldset><legend>Retraso del vídeo</legend><div className="delay-options">{DELAYS.map(seconds => <button key={seconds} type="button" aria-pressed={delay === seconds} onClick={() => saveDelay(seconds)}>{seconds}<span> s</span></button>)}</div><p className="field-help">Elige el tiempo que necesitas para acercarte a la pantalla.</p></fieldset>
+          <label className="quality-label" htmlFor="quality">Calidad del vídeo</label>
           <select id="quality" value={quality} onChange={event => setQuality(Number(event.target.value) as Quality)}>{PROFILES.map((profile, index) => <option value={index} key={profile.label}>{profile.label}{index === 0 ? ' · recomendada' : ''}</option>)}</select>
           <p className="field-help">Si tu móvil necesita menos carga, elige una calidad inferior.</p>
           <button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button>
-          <p className="local-note"><span aria-hidden="true">◉</span> Solo cámara. Sin micrófono ni vídeos guardados.</p>
+          <p className="local-note">Sin audio. El vídeo no se guarda.</p>
         </div>
       </section>
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
-      <section className="practical" aria-label="Instalación y funcionamiento">
-        <div><h2>Llévala al entrenamiento</h2><p>{pwa.offlineReady ? 'Lista para usar sin conexión.' : pwa.offlineError ? 'No se ha podido comprobar la caché. Conéctate y vuelve a abrir la aplicación antes de entrenar sin internet.' : 'Preparando los recursos para abrirla sin conexión…'}</p><span className={`offline-state ${pwa.offlineReady ? 'complete' : ''}`} role="status" data-testid="offline-status">{pwa.offlineReady ? '✓ Lista para usar sin conexión' : pwa.offlineError ? 'Preparación offline pendiente' : 'Comprobando disponibilidad offline'}</span>{pwa.canInstall && <button className="button secondary install-button" onClick={() => void pwa.installApp()}>Instalar aplicación</button>}{pwa.installed && <p>Aplicación instalada.</p>}</div>
-        <div className="help"><details><summary>Cómo instalarla</summary><p><strong>Android:</strong> abre esta página en Chrome y pulsa «Instalar aplicación» o utiliza «Añadir a pantalla de inicio» en el menú del navegador.</p><p><strong>iPhone, en evaluación:</strong> abre la página en Safari, pulsa Compartir y «Añadir a pantalla de inicio». La instalación no garantiza que el motor sea compatible.</p><p>Antes de salir de casa, espera al aviso de disponibilidad offline. Si borras los datos del navegador, tendrás que prepararla de nuevo.</p></details><details><summary>Qué ocurre con tu vídeo</summary><p>Las imágenes se procesan en este móvil y se mantienen temporalmente en memoria. No se envían a servidores, no se guardan en la galería y no se solicita el micrófono.</p><p>Al detener la sesión, cerrar la aplicación o pasar a segundo plano se libera la cámara y el búfer. No hay grabaciones que recuperar.</p></details><details><summary>Antes de empezar</summary><p>Usa Chrome actualizado en Android. Coloca el móvil estable y, si puedes, en horizontal. Evita el sol directo y comprueba la batería.</p><p>El retraso es aproximado. Esta versión está pendiente de pruebas de treinta minutos en móviles reales. iPhone está en evaluación.</p></details></div>
-      </section>
+      {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}>Instalar aplicación</button></div>}
       {metrics && <Diagnostics metrics={metrics} actualQuality={actualQuality} />}
-      <footer>Vuelve a ver tu movimiento y sigue entrenando.<span>Vídeo local · Sin cuentas</span></footer>
     </div>
 
     <section className={`player ${active ? 'is-active' : ''}`} aria-label="Sesión de vídeo con retraso" aria-hidden={!active} onPointerDown={showControls} onFocus={showControls}>
@@ -112,6 +110,7 @@ export function DelayApp() {
         {metrics && <div className={`session-diagnostics ${controls ? '' : 'controls-hidden'}`}><Diagnostics metrics={metrics} actualQuality={actualQuality} /></div>}
       </>}
     </section>
+    {showOnboarding && <Onboarding pwa={pwa} delay={delay} onDelay={saveDelay} onClose={() => setGuideOpen(false)} />}
   </main>;
 }
 

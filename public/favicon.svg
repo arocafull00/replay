@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">rePlay: movimiento y repetición</title>
+  <rect width="256" height="256" rx="52" fill="#292a2b"/>
+  <path fill="#faf9f5" fill-rule="evenodd" d="M94 30Q60 16 54 52V164L38 178Q34 182 39 186L92 220Q98 224 98 214V206L206 154Q234 140 212 106ZM90 76V184Q90 198 104 190L208 140Q218 134 206 127L104 75Q90 70 90 76Z"/>
+  <circle cx="150" cy="92" r="18" fill="#292a2b"/>
+  <circle cx="150" cy="92" r="12" fill="#faf9f5"/>
+  <path fill="#faf9f5" d="M90 128Q114 107 133 118L155 132Q163 137 176 126Q181 121 185 125Q189 130 179 140Q166 153 150 146L142 141L133 151Q145 152 151 162L128 176L124 166Q116 158 108 170L96 186L90 182L105 157L117 136Q107 128 90 141Z"/>
+</svg>

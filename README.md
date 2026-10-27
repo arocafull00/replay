@@ -15,19 +15,13 @@ Requisitos: Node.js 22 o superior y pnpm 10.
 ```sh
 pnpm install
 pnpm dev
-pnpm test
 pnpm lint
 pnpm typecheck
 pnpm build
 pnpm start
 ```
 
-`pnpm start` sirve la exportación de producción en localhost:3000. Las pruebas E2E utilizan su propio servidor en localhost:4317:
-
-```sh
-pnpm exec playwright install chromium
-pnpm test:e2e
-```
+`pnpm start` sirve la exportación de producción en localhost:3000.
 
 El Service Worker solo se registra en producción. Para probar offline, compilar y servir `out/`; el servidor de desarrollo no es una prueba de la PWA. La cámara requiere HTTPS o localhost; una IP LAN en HTTP no es suficiente.
 

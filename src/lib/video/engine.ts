@@ -118,7 +118,7 @@ export class DelayEngine {
       this.buffer.addEventListener('updateend', this.updated);
       this.buffer.addEventListener('error', this.mediaError);
       target.addEventListener('error', this.mediaError);
-      const recorder = new MediaRecorder(stream, { mimeType: MIME, videoBitsPerSecond: 4_000_000 });
+      const recorder = new MediaRecorder(stream, { mimeType: MIME, videoBitsPerSecond: 4_000_000, videoKeyFrameIntervalDuration: 1000 } as MediaRecorderOptions);
       this.recorder = recorder;
       recorder.ondataavailable = event => {
         if (generation !== this.generation || !event.data.size) return;
@@ -196,7 +196,11 @@ export class DelayEngine {
     if (now - this.lastProgress > 10_000) { this.fail('No está llegando vídeo nuevo. Comprueba la cámara y vuelve a iniciar.', true); return; }
     const desired = elapsed - this.delay;
     let inside = false;
-    for (let i = 0; i < ranges.length; i++) if (desired >= ranges.start(i) && desired < ranges.end(i) - 0.15) inside = true;
+    let gap = false;
+    for (let i = 0; i < ranges.length; i++) {
+      if (desired >= ranges.start(i) && desired < ranges.end(i) - 0.15) inside = true;
+      else if (i > 0 && desired >= ranges.end(i - 1) - 0.15 && desired < ranges.start(i) && ranges.start(i) - desired < 1.5) gap = true;
+    }
     const available = ranges.length ? end - ranges.start(ranges.length - 1) : 0;
     this.emit({ type: 'progress', seconds: Math.min(this.delay, available) });
     if (desired >= 0 && inside && !this.playbackBlocked) {
@@ -224,7 +228,7 @@ export class DelayEngine {
         target.pause();
         this.playingRequested = false;
       }
-    } else if (this.state === 'playing' && !this.playbackBlocked) {
+    } else if (this.state === 'playing' && !this.playbackBlocked && !gap) {
       this.setState('recovering');
       this.recoveryAt = now;
       target.pause();

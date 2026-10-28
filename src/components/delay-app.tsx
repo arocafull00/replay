@@ -31,6 +31,7 @@ export function DelayApp() {
   const engine = useRef<DelayEngine | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const toolbar = useRef<HTMLDivElement>(null);
+  const logoutDialog = useRef<HTMLDialogElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = !['ready', 'error'].includes(state);
   const pwa = usePwa(active);
@@ -79,7 +80,7 @@ export function DelayApp() {
 
   return <main>
     <div className={`setup ${active ? 'hidden' : ''}`} inert={showOnboarding}>
-      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button><button type="button" className="how-button" onClick={() => void signOut()}>Salir</button></div></header>
+      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><button type="button" className="logout-button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={() => logoutDialog.current?.showModal()}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg></button></header>
       <div className="setup-body">
       <section className="intro" aria-labelledby="app-title">
         <h1 id="app-title">Revisa tu movimiento<br /><span>unos segundos después.</span></h1>
@@ -89,6 +90,7 @@ export function DelayApp() {
           <fieldset><legend>Retraso del vídeo</legend><div className="delay-options">{DELAYS.map(seconds => <button key={seconds} type="button" aria-pressed={delay === seconds} onClick={() => saveDelay(seconds)}>{seconds}<span> s</span></button>)}</div><p className="field-help">Elige el tiempo que necesitas para acercarte a la pantalla.</p></fieldset>
           <label className="quality-label" htmlFor="quality">Calidad del vídeo</label>
           <select id="quality" value={quality} onChange={event => setQuality(Number(event.target.value) as Quality)}>{PROFILES.map((profile, index) => <option value={index} key={profile.label}>{profile.label}{index === 0 ? ' · recomendada' : ''}</option>)}</select>
+          <button type="button" className="how-link" onClick={() => setGuideOpen(true)}>Cómo funciona</button>
         </div>
       </section>
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
@@ -111,6 +113,14 @@ export function DelayApp() {
         {metrics && <div className={`session-diagnostics ${controls ? '' : 'controls-hidden'}`}><Diagnostics metrics={metrics} actualQuality={actualQuality} /></div>}
       </>}
     </section>
+    <dialog ref={logoutDialog} className="confirm-dialog" aria-labelledby="logout-title" onClick={event => { if (event.target === event.currentTarget) logoutDialog.current?.close(); }}>
+      <div className="confirm-body">
+        <h2 id="logout-title">¿Cerrar sesión?</h2>
+        <p>Tendrás que volver a iniciar sesión para usar rePlay.</p>
+        <button type="button" className="dialog-close" aria-label="Cerrar" onClick={() => logoutDialog.current?.close()}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button>
+      </div>
+      <form method="dialog" className="confirm-actions"><button className="button secondary" autoFocus><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>Cancelar</button><button type="button" className="button confirm-button" onClick={() => void signOut()}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>Cerrar sesión</button></form>
+    </dialog>
     {showOnboarding && <Onboarding pwa={pwa} delay={delay} onDelay={saveDelay} onClose={() => setGuideOpen(false)} />}
   </main>;
 }

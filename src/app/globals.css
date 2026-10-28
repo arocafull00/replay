@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-:root { --bg: oklch(.988 .004 95); --surface: oklch(.965 .006 90); --ink: oklch(.19 0 0); --muted: oklch(.50 .01 90); --primary: oklch(.22 0 0); --line: oklch(.89 .008 90); --signal: oklch(.82 .165 82); --soft-signal: oklch(.955 .05 90); }
+:root { --bg: oklch(.988 .004 95); --surface: oklch(.965 .006 90); --ink: oklch(.19 0 0); --muted: oklch(.50 .01 90); --primary: oklch(.22 0 0); --line: oklch(.89 .008 90); --signal: oklch(.82 .165 82); --soft-signal: oklch(.955 .05 90); --glow: radial-gradient(100% 50% at 50% 0%, oklch(.82 .165 82 / .2) 0, oklch(.82 .165 82 / 0) 50%, oklch(.82 .165 82 / 0) 100%); }
 * { box-sizing: border-box; }
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, Helvetica, system-ui, sans-serif; line-height: 1.5; }
@@ -16,6 +16,7 @@ h1, h2, p { margin: 0; }
 h1, h2 { text-wrap: balance; }
 p { text-wrap: pretty; }
 .hidden { display: none !important; }
+main:has(> .setup:not(.hidden)) { background: var(--bg) var(--glow); }
 .setup { max-width: 760px; margin: 0 auto; padding: 0 40px; min-height: 100dvh; display: flex; flex-direction: column; }
 .setup-body { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding-bottom: 24px; }
 .start-bar { position: sticky; bottom: 0; padding: 16px 0 max(20px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 24px); }
@@ -99,7 +100,7 @@ progress::-webkit-progress-bar { background: oklch(.3 0 0); } progress::-webkit-
 .session-diagnostics .diagnostics { background: oklch(.15 0 0 / .96); border-radius: 8px; padding: 0 16px; color: oklch(.88 0 0); margin: 0; }
 .session-diagnostics summary { font-size: 12px; }
 html[data-auth=out] .setup { visibility: hidden; }
-.login { background: var(--bg) radial-gradient(100% 50% at 50% 0%, oklch(.82 .165 82 / .2) 0, oklch(.82 .165 82 / 0) 50%, oklch(.82 .165 82 / 0) 100%); min-height: 100dvh; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom)); }
+.login { background: var(--bg) var(--glow); min-height: 100dvh; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom)); }
 .login-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; }
 .login-card .wordmark { align-self: center; }
 .login-card h1 { font-size: 30px; letter-spacing: -.9px; text-align: center; margin: 28px 0 28px; }

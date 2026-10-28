@@ -26,7 +26,7 @@ const STEPS: Step[] = [
   { id: 'delay', sport: 'football', title: '¿Cuánto tardas en llegar a la pantalla?', description: 'Elige un retraso. Podrás cambiarlo siempre antes de empezar.' },
   { id: 'privacy', sport: 'volleyball', title: 'Tu vídeo no sale del móvil', description: 'Todo ocurre en este dispositivo y desaparece al terminar.', items: [
     { sport: 'tennis', title: 'Sin micrófono', description: 'Solo se usa la cámara, nunca el audio.' },
-    { sport: 'basketball', title: 'Nada se guarda', description: 'Ni en la galería ni en servidores. Al detener, se borra.' },
+    { sport: 'basketball', title: 'Solo guardas lo que quieras', description: 'Nada va a servidores. Al detener se borra todo salvo los clips que guardes, que se quedan en este móvil.' },
     { sport: 'football', title: 'Sin cuentas', description: 'Ábrela y úsala. No hace falta registrarse.' },
   ] },
   { id: 'install', sport: 'basketball', title: 'Añade rePlay a tu inicio', description: 'Ábrela desde el icono de tu móvil cuando vayas a entrenar.' },

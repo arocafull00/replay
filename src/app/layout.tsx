@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { AuthProvider } from '@/components/auth-provider';
 import './globals.css';
 import './onboarding.css';
 export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://replayapp.vercel.app');
@@ -15,5 +16,5 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#1c1c1c' };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('voley-delay:onboarding:v1')===null)document.documentElement.dataset.onboarding='pending'}catch(e){}" }} /></head><body>{children}<Analytics /><SpeedInsights /></body></html>;
+  return <html lang="es" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('voley-delay:onboarding:v1')===null)document.documentElement.dataset.onboarding='pending';if(localStorage.getItem('replay:session:v1')===null)document.documentElement.dataset.auth='out'}catch(e){}" }} /></head><body><AuthProvider>{children}</AuthProvider><Analytics /><SpeedInsights /></body></html>;
 }

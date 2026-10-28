@@ -7,6 +7,7 @@ import { DelayEngine, type EngineEvent, type EngineState, type Metrics } from '@
 import { DELAYS, isDelay, PROFILES, type DelaySeconds, type Quality } from '@/lib/video/policy';
 import { usePwa } from '@/lib/use-pwa';
 import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
+import { useClerk } from '@clerk/react';
 
 const STORAGE_KEY = 'voley-delay:delay:v1';
 function readDelay(): DelaySeconds { try { const value = Number(localStorage.getItem(STORAGE_KEY)); return isDelay(value) ? value : 10; } catch { return 10; } }
@@ -33,6 +34,7 @@ export function DelayApp() {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = !['ready', 'error'].includes(state);
   const pwa = usePwa(active);
+  const { signOut } = useClerk();
   const onboardingSeen = useOnboardingSeen();
   const [guideOpen, setGuideOpen] = useState(false);
   const showOnboarding = (!onboardingSeen || guideOpen) && !active;
@@ -77,7 +79,7 @@ export function DelayApp() {
 
   return <main>
     <div className={`setup ${active ? 'hidden' : ''}`} inert={showOnboarding}>
-      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button></div></header>
+      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-actions"><button type="button" className="how-button" onClick={() => setGuideOpen(true)}>Cómo funciona</button><button type="button" className="how-button" onClick={() => void signOut()}>Salir</button></div></header>
       <div className="setup-body">
       <section className="intro" aria-labelledby="app-title">
         <h1 id="app-title">Revisa tu movimiento<br /><span>unos segundos después.</span></h1>

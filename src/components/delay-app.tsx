@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { DelayEngine, type EngineEvent, type EngineState, type Metrics } from '@/lib/video/engine';
-import { DELAYS, isDelay, PROFILES, type DelaySeconds, type Quality } from '@/lib/video/policy';
+import { DelayEngine, type EngineEvent, type EngineState } from '@/lib/video/engine';
+import { CLIP_SECONDS, DELAYS, isDelay, PROFILES, type DelaySeconds, type Quality } from '@/lib/video/policy';
 import { usePwa } from '@/lib/use-pwa';
 import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
 import { useClerk } from '@clerk/react';
@@ -25,9 +25,11 @@ export function DelayApp() {
   const [message, setMessage] = useState('');
   const [blocked, setBlocked] = useState(false);
   const [lowerQuality, setLowerQuality] = useState(false);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [controls, setControls] = useState(true);
   const [sessionDelay, setSessionDelay] = useState<DelaySeconds>(10);
+  const [clipping, setClipping] = useState(false);
+  const [clipNotice, setClipNotice] = useState('');
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const engine = useRef<DelayEngine | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const toolbar = useRef<HTMLDivElement>(null);
@@ -44,7 +46,6 @@ export function DelayApp() {
     if (event.type === 'state') { setState(event.state); if (event.state === 'playing') { setBlocked(false); setMessage(''); } }
     if (event.type === 'progress') setProgress(event.seconds);
     if (event.type === 'quality') { setActualQuality(`${event.width} × ${event.height} · ${Math.round(event.fps)} FPS`); setReduced(event.reduced); }
-    if (event.type === 'metrics') setMetrics(event.metrics);
     if (event.type === 'error') { setMessage(event.message); setBlocked(!!event.playbackBlocked); setLowerQuality(!!event.lowerQuality); }
     if (event.type === 'interrupted') setMessage(event.message);
   }, []);
@@ -58,7 +59,7 @@ export function DelayApp() {
     else { document.body.classList.remove('session-active'); if (document.fullscreenElement) void document.exitFullscreen().catch(() => {}); }
     return () => document.body.classList.remove('session-active');
   }, [active]);
-  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); if (noticeTimer.current) clearTimeout(noticeTimer.current); }, []);
 
   function showControls() {
     setControls(true);
@@ -69,13 +70,37 @@ export function DelayApp() {
   }
   function start(nextQuality: Quality = quality) {
     if (!video.current || !engine.current) return;
-    setMessage(''); setBlocked(false); setLowerQuality(false); setProgress(0); setMetrics(null);
+    setMessage(''); setBlocked(false); setLowerQuality(false); setProgress(0);
     setQuality(nextQuality); setSessionDelay(delay); showControls();
     // Fullscreen is best effort and must be requested inside this user gesture.
     if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
     void engine.current.start({ delaySeconds: delay, quality: nextQuality, target: video.current });
   }
-  function stop() { engine.current?.stop(); setMessage(''); setBlocked(false); setLowerQuality(false); }
+  function stop() { engine.current?.stop(); setMessage(''); setBlocked(false); setLowerQuality(false); setClipNotice(''); }
+  function notify(text: string) {
+    setClipNotice(text);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setClipNotice(''), 4000);
+  }
+  async function saveClip() {
+    if (!engine.current || clipping) return;
+    setClipping(true);
+    try {
+      const clip = await engine.current.clip();
+      if (!clip) return;
+      const url = URL.createObjectURL(clip);
+      const link = document.createElement('a');
+      const now = new Date();
+      const pad = (value: number) => String(value).padStart(2, '0');
+      link.href = url;
+      link.download = `replay-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.mp4`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      notify('Clip guardado en tus descargas.');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'No se pudo guardar el clip.');
+    } finally { setClipping(false); showControls(); }
+  }
   const waiting = state === 'requesting' || state === 'buffering' || state === 'recovering';
 
   return <main>
@@ -94,8 +119,7 @@ export function DelayApp() {
         </div>
       </section>
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
-      {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}>Instalar aplicación</button></div>}
-      {metrics && <Diagnostics metrics={metrics} actualQuality={actualQuality} />}
+      {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="m7 10 5 5 5-5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></svg>Instalar aplicación en un clic</button></div>}
       </div>
       <div className="start-bar"><button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button></div>
     </div>
@@ -106,11 +130,14 @@ export function DelayApp() {
         <div className="player-status"><span className={state === 'playing' ? 'status-dot' : 'status-dot waiting'} />{labels[state]}<span className="delay-badge">{sessionDelay} s de retraso</span></div>
         {waiting && <div className="buffer-overlay" role="status"><p>{state === 'requesting' ? 'Permite el acceso a la cámara' : state === 'recovering' ? 'Recuperando el vídeo' : 'Preparando tu vídeo con retraso'}</p><strong>{state === 'requesting' ? '…' : Math.max(0, Math.ceil(sessionDelay - progress))}<span>{state !== 'requesting' ? ' s' : ''}</span></strong><progress max={sessionDelay} value={progress} aria-label="Vídeo disponible en el búfer" /><p className="buffer-hint">{state === 'requesting' ? 'No se solicitará el micrófono.' : 'El vídeo comenzará automáticamente.'}</p></div>}
         {blocked && <div className="playback-prompt" role="alert"><p>{message}</p><button className="button primary" onClick={() => engine.current?.resumePlayback()}>Reproducir vídeo</button></div>}
-        <div ref={toolbar} className={`player-controls ${controls || blocked ? '' : 'controls-hidden'}`} onBlur={showControls}>
+        <div ref={toolbar} className={`player-controls ${controls || blocked || clipping ? '' : 'controls-hidden'}`} onBlur={showControls}>
           <div><strong>{sessionDelay} segundos después</strong><span>{actualQuality || 'Comprobando la cámara…'}{reduced ? ' · Calidad reducida' : ''}</span></div>
-          <button className="button stop-button" onClick={stop}><span aria-hidden="true">■</span> Detener</button>
+          <div className="player-actions">
+            <button className="button clip-button" onClick={() => void saveClip()} disabled={state !== 'playing' || clipping} aria-busy={clipping} aria-label={clipping ? 'Guardando clip' : `Guardar clip de los últimos ${CLIP_SECONDS} segundos`} title={`Guardar los últimos ${CLIP_SECONDS} s`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.12 15.88" /><path d="M14.47 14.48 20 20" /><path d="M8.12 8.12 12 12" /></svg><span className="clip-label">{clipping ? 'Guardando…' : 'Clip'}</span></button>
+            <button className="button stop-button" onClick={stop}><span aria-hidden="true">■</span> Detener</button>
+          </div>
         </div>
-        {metrics && <div className={`session-diagnostics ${controls ? '' : 'controls-hidden'}`}><Diagnostics metrics={metrics} actualQuality={actualQuality} /></div>}
+        {clipNotice && <div className="clip-notice" role="status">{clipNotice}</div>}
       </>}
     </section>
     <dialog ref={logoutDialog} className="confirm-dialog" aria-labelledby="logout-title" onClick={event => { if (event.target === event.currentTarget) logoutDialog.current?.close(); }}>
@@ -125,6 +152,3 @@ export function DelayApp() {
   </main>;
 }
 
-function Diagnostics({ metrics, actualQuality }: { metrics: Metrics; actualQuality: string }) {
-  return <details className="diagnostics"><summary>Datos para las pruebas</summary><dl><div><dt>Calidad concedida</dt><dd>{actualQuality}</dd></div><div><dt>Tiempo de sesión</dt><dd data-testid="elapsed">{metrics.elapsed.toFixed(1)} s</dd></div><div><dt>Retraso estimado</dt><dd data-testid="actual-delay">{metrics.actualDelay === null ? 'Esperando fotogramas' : `${metrics.actualDelay.toFixed(2)} s`}</dd></div><div><dt>Ventana de vídeo</dt><dd>{metrics.buffered.toFixed(1)} s</dd></div><div><dt>Datos comprimidos contabilizados</dt><dd data-testid="buffer-bytes">{(metrics.bytes / 1024 / 1024).toFixed(2)} MiB</dd></div><div><dt>Fotogramas descartados</dt><dd>{metrics.droppedFrames} / {metrics.totalFrames}</dd></div></dl><p>El retraso usa el reloj multimedia y no mide toda la latencia de cámara y pantalla. La memoria indicada no incluye todos los recursos del navegador. Verifica el resultado con un reloj externo.</p></details>;
-}

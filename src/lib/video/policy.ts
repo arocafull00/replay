@@ -1,6 +1,8 @@
 export const DELAYS = [5, 10, 15, 20, 30] as const;
 export type DelaySeconds = (typeof DELAYS)[number];
 export const MAX_BYTES = 64 * 1024 * 1024;
+export const CLIP_SECONDS = 20;
+export const CLIP_BYTES = 32 * 1024 * 1024;
 export const PROFILES = [
   { width: 1280, height: 720, fps: 30, label: '720p · 30 FPS' },
   { width: 1280, height: 720, fps: 24, label: '720p · 24 FPS' },

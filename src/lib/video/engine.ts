@@ -1,4 +1,4 @@
-import { BufferBudget, cameraError, MAX_BYTES, PROFILES, synchronization, type DelaySeconds, type Quality } from './policy';
+import { BufferBudget, cameraError, CLIP_BYTES, CLIP_SECONDS, MAX_BYTES, PROFILES, synchronization, type DelaySeconds, type Quality } from './policy';
 
 export type EngineState = 'ready' | 'requesting' | 'buffering' | 'playing' | 'recovering' | 'stopping' | 'error';
 export type Metrics = {
@@ -27,6 +27,48 @@ function sourceOpened(source: MediaSource, signal: AbortSignal) {
   });
 }
 
+const CLUSTER = [0x1f, 0x43, 0xb6, 0x75];
+function vint(bytes: Uint8Array, at: number) {
+  const first = bytes[at];
+  if (!first) return null;
+  const length = Math.clz32(first) - 23;
+  if (at + length > bytes.length) return null;
+  let value = first & (0xff >> length);
+  for (let i = 1; i < length; i++) value = value * 256 + bytes[at + i];
+  return { length, value };
+}
+function isCluster(bytes: Uint8Array, at: number) {
+  return CLUSTER.every((byte, i) => bytes[at + i] === byte);
+}
+function element(bytes: Uint8Array, at: number) {
+  const id = vint(bytes, at);
+  const size = id && vint(bytes, at + id.length);
+  if (!id || !size) return null;
+  const start = at + id.length + size.length;
+  return { id: bytes[at], start, end: start + size.value };
+}
+function keyCluster(bytes: Uint8Array, at: number) {
+  if (!isCluster(bytes, at)) return null;
+  const size = vint(bytes, at + 4);
+  const timecode = size && element(bytes, at + 4 + size.length);
+  if (!timecode || timecode.id !== 0xe7 || timecode.end - timecode.start > 8) return null;
+  let value = 0;
+  for (let i = timecode.start; i < timecode.end; i++) value = value * 256 + bytes[i];
+  const block = element(bytes, timecode.end);
+  if (!block || block.end > bytes.length) return null;
+  if (block.id === 0xa3) {
+    const track = vint(bytes, block.start);
+    return track && bytes[block.start + track.length + 2] & 0x80 ? value : null;
+  }
+  if (block.id !== 0xa0) return null;
+  for (let p = block.start; p < block.end;) {
+    const child = element(bytes, p);
+    if (!child || child.id === 0xfb) return null;
+    p = child.end;
+  }
+  return value;
+}
+
 export class DelayEngine {
   private emit: (event: EngineEvent) => void;
   private state: EngineState = 'ready';
@@ -40,6 +82,9 @@ export class DelayEngine {
   private url: string | null = null;
   private queue: Blob[] = [];
   private queuedBytes = 0;
+  private header: Promise<Uint8Array<ArrayBuffer>> | null = null;
+  private raw: { time: number; blob: Blob }[] = [];
+  private rawBytes = 0;
   private draining = false;
   private budget = new BufferBudget();
   private clock = 0;
@@ -127,6 +172,7 @@ export class DelayEngine {
           this.queue.push(event.data);
           this.queuedBytes += event.data.size;
           if (this.queuedBytes > MAX_BYTES / 4) throw new Error('El dispositivo no procesa el vídeo a tiempo. Reinicia con una calidad inferior.');
+          this.keep(event.data);
           void this.drain();
         } catch (error) { this.fail(cameraError(error), true); }
       };
@@ -147,6 +193,48 @@ export class DelayEngine {
     }
   }
   private elapsed() { return (performance.now() - this.clock) / 1000; }
+  private keep(blob: Blob) {
+    if (!this.header) this.header = blob.arrayBuffer().then(buffer => {
+      const bytes = new Uint8Array(buffer);
+      const end = bytes.findIndex((_, i) => isCluster(bytes, i));
+      return end < 0 ? bytes : bytes.slice(0, end);
+    });
+    this.raw.push({ time: this.elapsed(), blob });
+    this.rawBytes += blob.size;
+    this.trimRaw();
+  }
+  private trimRaw() {
+    const oldest = this.elapsed() - this.delay - CLIP_SECONDS - 3;
+    while (this.raw.length > 1 && (this.raw[0].time < oldest || this.rawBytes > CLIP_BYTES)) this.rawBytes -= this.raw.shift()!.blob.size;
+  }
+  async clip(): Promise<Blob | null> {
+    const generation = this.generation;
+    const target = this.target;
+    if (this.state !== 'playing' || !target || !this.header || !this.raw.length) throw new Error('Espera a que el vídeo esté en marcha para guardar un clip.');
+    const end = target.currentTime;
+    const [header, recent] = await Promise.all([this.header, new Blob(this.raw.map(entry => entry.blob)).arrayBuffer()]);
+    if (generation !== this.generation) return null;
+    const bytes = new Uint8Array(recent);
+    let from = -1;
+    let timecode: number | null = null;
+    for (let i = bytes.indexOf(CLUSTER[0]); i >= 0; i = bytes.indexOf(CLUSTER[0], i + 1)) {
+      timecode = keyCluster(bytes, i);
+      if (timecode !== null) { from = i; break; }
+    }
+    if (from < 0 || timecode === null || timecode / 1000 >= end) throw new Error('Todavía no hay vídeo suficiente para el clip. Prueba en unos segundos.');
+    const { BlobSource, BufferTarget, canEncodeVideo, Conversion, Input, Mp4OutputFormat, Output, WEBM } = await import('mediabunny');
+    if (!(await canEncodeVideo('avc'))) throw new Error('Este navegador no puede crear vídeos MP4.');
+    const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+    try {
+      const conversion = await Conversion.init({
+        input: new Input({ formats: [WEBM], source: new BlobSource(new Blob([header, bytes.subarray(from)])) }),
+        output, video: { codec: 'avc' }, trim: { start: Math.max(timecode / 1000, end - CLIP_SECONDS), end }, showWarnings: false,
+      });
+      await conversion.execute();
+    } catch { throw new Error('No se pudo convertir el clip a MP4.'); }
+    if (generation !== this.generation || !output.target.buffer) return null;
+    return new Blob([output.target.buffer], { type: 'video/mp4' });
+  }
   private updated = () => { void this.drain(); };
   private mediaError = () => this.fail('El navegador no pudo reproducir el vídeo continuo. Reinicia con una calidad inferior.', true);
   private async drain() {
@@ -242,8 +330,9 @@ export class DelayEngine {
       const quality = target.getVideoPlaybackQuality?.();
       const displayed = this.presentedTime !== null && now - this.presentedAt < 1500 ? this.presentedTime : null;
       this.emit({ type: 'metrics', metrics: { elapsed, actualDelay: displayed === null ? null : elapsed - displayed,
-        buffered: available, bytes: this.budget.bytes, droppedFrames: quality?.droppedVideoFrames ?? 0, totalFrames: quality?.totalVideoFrames ?? 0 } });
+        buffered: available, bytes: this.budget.bytes + this.rawBytes, droppedFrames: quality?.droppedVideoFrames ?? 0, totalFrames: quality?.totalVideoFrames ?? 0 } });
     }
+    this.trimRaw();
     void this.drain();
   }
   resumePlayback() {
@@ -289,6 +378,7 @@ export class DelayEngine {
     if (this.wake) void this.wake.release().catch(() => {});
     this.wake = null; this.url = null; this.target = null; this.frameCallback = null;
     this.queue = []; this.queuedBytes = 0; this.draining = false; this.budget.clear();
+    this.header = null; this.raw = []; this.rawBytes = 0;
     this.lastEnd = this.lastRemoval = this.lastMetric = this.recoveryAt = 0;
     this.presentedTime = null; this.lastPlayhead = this.playheadAt = 0; this.playingRequested = this.playbackBlocked = false;
     this.setState('ready');

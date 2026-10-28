@@ -16,6 +16,14 @@ La API no garantiza que cada Blob de MediaRecorder pueda reproducirse solo. Esta
 - Presupuesto de datos comprimidos de 64 MiB y cola pendiente de 16 MiB. La memoria total del navegador puede ser superior.
 - Parada idempotente. Se detienen pistas y grabador, se eliminan colas y referencias, se revoca la URL y se libera Wake Lock. Una cámara que llegue después de cancelar permisos se detiene inmediatamente.
 
+## Clips
+
+- El botón «Clip» guarda en MP4 los 20 s que terminan en el fotograma que se está viendo (`CLIP_SECONDS`). La sesión sigue mientras se genera.
+- MSE no deja leer los bytes que ya tiene y además borra lo reproducido, así que el motor guarda aparte los Blob de `MediaRecorder` de los últimos `retraso + 20 + 3` segundos, con un tope de 32 MiB (`CLIP_BYTES`): con 30 s de retraso son unos 26 MiB a 4 Mbps. Si se llega al tope se descartan los más antiguos; la sesión no se detiene por ello. Estos bytes se suman a «Datos comprimidos contabilizados».
+- De la primera entrega se conserva la cabecera WebM (todo lo anterior al primer Cluster). Al pedir un clip se une la cabecera con los Blob guardados a partir del primer Cluster que empieza por un fotograma clave, y se valida el Cluster (Timecode y SimpleBlock) para no cortar por una coincidencia dentro del vídeo.
+- Ese WebM se transcodifica a H.264/MP4 con Mediabunny (WebCodecs), cargado solo al pulsar el botón y recortado a la ventana exacta. Requiere `VideoEncoder` con AVC; si el navegador no lo tiene, se muestra un aviso y no se genera el archivo.
+- El archivo se descarga como `replay-AAAAMMDD-HHMMSS.mp4`. Falta medir en Android real cuánto tarda la conversión y si afecta a la reproducción con retraso.
+
 ## Evidencia y límites
 
 El proyecto no incluye pruebas automatizadas. La validación depende de las pruebas manuales en móviles reales descritas en VALIDATION.md. No hay dispositivos físicos certificados en esta entrega.

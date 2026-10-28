@@ -22,7 +22,10 @@ La API no garantiza que cada Blob de MediaRecorder pueda reproducirse solo. Esta
 - MSE no deja leer los bytes que ya tiene y además borra lo reproducido, así que el motor guarda aparte los Blob de `MediaRecorder` de los últimos `retraso + 20 + 3` segundos, con un tope de 32 MiB (`CLIP_BYTES`): con 30 s de retraso son unos 26 MiB a 4 Mbps. Si se llega al tope se descartan los más antiguos; la sesión no se detiene por ello. Estos bytes se suman a «Datos comprimidos contabilizados».
 - De la primera entrega se conserva la cabecera WebM (todo lo anterior al primer Cluster). Al pedir un clip se une la cabecera con los Blob guardados a partir del primer Cluster que empieza por un fotograma clave, y se valida el Cluster (Timecode y SimpleBlock) para no cortar por una coincidencia dentro del vídeo.
 - Ese WebM se transcodifica a H.264/MP4 con Mediabunny (WebCodecs), cargado solo al pulsar el botón y recortado a la ventana exacta. Requiere `VideoEncoder` con AVC; si el navegador no lo tiene, se muestra un aviso y no se genera el archivo.
-- El archivo se descarga como `replay-AAAAMMDD-HHMMSS.mp4`. Falta medir en Android real cuánto tarda la conversión y si afecta a la reproducción con retraso.
+- El MP4 no se descarga al momento: se guarda en IndexedDB (`replay-clips`, almacén `clips`, `src/lib/clips.ts`) con el `userId` de Clerk, la fecha, la duración y el tamaño. Al guardar se pide `navigator.storage.persist()` para que el navegador no lo borre cuando le falte espacio; si se llena la cuota, se avisa de que hay que borrar algún clip.
+- La pantalla «Tus clips» (botón de la cabecera de inicio) muestra los clips del usuario actual: se pueden ver, descargar como `replay-AAAAMMDD-HHMMSS.mp4`, compartir con Web Share cuando el navegador admite archivos, y borrar. Es una vista dentro de `DelayApp` con una entrada en el historial para que el botón atrás la cierre; no tiene ruta propia y funciona sin conexión.
+- Los clips no se borran al cerrar sesión: cada usuario ve solo los suyos. Se pierden si se borran los datos del sitio o se desinstala la app.
+- Falta medir en Android real cuánto tarda la conversión y si afecta a la reproducción con retraso.
 
 ## Evidencia y límites
 

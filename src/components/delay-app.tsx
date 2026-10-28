@@ -7,7 +7,9 @@ import { DelayEngine, type EngineEvent, type EngineState } from '@/lib/video/eng
 import { CLIP_SECONDS, DELAYS, isDelay, PROFILES, type DelaySeconds, type Quality } from '@/lib/video/policy';
 import { usePwa } from '@/lib/use-pwa';
 import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
-import { useClerk } from '@clerk/react';
+import { Clips } from '@/components/clips';
+import { addClip, useClips } from '@/lib/clips';
+import { useAuth, useClerk } from '@clerk/react';
 
 const STORAGE_KEY = 'voley-delay:delay:v1';
 function readDelay(): DelaySeconds { try { const value = Number(localStorage.getItem(STORAGE_KEY)); return isDelay(value) ? value : 10; } catch { return 10; } }
@@ -38,9 +40,12 @@ export function DelayApp() {
   const active = !['ready', 'error'].includes(state);
   const pwa = usePwa(active);
   const { signOut } = useClerk();
+  const { userId } = useAuth();
+  const clips = useClips(userId);
+  const [view, setView] = useState<'setup' | 'clips'>('setup');
   const onboardingSeen = useOnboardingSeen();
   const [guideOpen, setGuideOpen] = useState(false);
-  const showOnboarding = (!onboardingSeen || guideOpen) && !active;
+  const showOnboarding = (!onboardingSeen || guideOpen) && !active && view === 'setup';
 
   const receive = useCallback((event: EngineEvent) => {
     if (event.type === 'state') { setState(event.state); if (event.state === 'playing') { setBlocked(false); setMessage(''); } }
@@ -60,6 +65,12 @@ export function DelayApp() {
     return () => document.body.classList.remove('session-active');
   }, [active]);
   useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); if (noticeTimer.current) clearTimeout(noticeTimer.current); }, []);
+  useEffect(() => {
+    const restore = () => setView(history.state?.clips ? 'clips' : 'setup');
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, []);
+  function openClips() { history.pushState({ clips: true }, ''); setView('clips'); }
 
   function showControls() {
     setControls(true);
@@ -86,17 +97,11 @@ export function DelayApp() {
     if (!engine.current || clipping) return;
     setClipping(true);
     try {
+      if (!userId) throw new Error('Espera un momento y vuelve a intentarlo.');
       const clip = await engine.current.clip();
       if (!clip) return;
-      const url = URL.createObjectURL(clip);
-      const link = document.createElement('a');
-      const now = new Date();
-      const pad = (value: number) => String(value).padStart(2, '0');
-      link.href = url;
-      link.download = `replay-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.mp4`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      notify('Clip guardado en tus descargas.');
+      await addClip(userId, clip.blob, clip.duration);
+      notify('Clip guardado en Tus clips.');
     } catch (error) {
       notify(error instanceof Error ? error.message : 'No se pudo guardar el clip.');
     } finally { setClipping(false); showControls(); }
@@ -104,8 +109,8 @@ export function DelayApp() {
   const waiting = state === 'requesting' || state === 'buffering' || state === 'recovering';
 
   return <main>
-    <div className={`setup ${active ? 'hidden' : ''}`} inert={showOnboarding}>
-      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><button type="button" className="logout-button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={() => logoutDialog.current?.showModal()}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg></button></header>
+    <div className={`setup ${active || view === 'clips' ? 'hidden' : ''}`} inert={showOnboarding}>
+      <header className="app-header"><Link className="wordmark" href="/" prefetch={false} aria-label="rePlay, inicio"><Image src="/mark.png?v=athlete-1" width={36} height={36} alt="" unoptimized />rePlay</Link><div className="header-buttons"><button type="button" className="logout-button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={() => logoutDialog.current?.showModal()}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg></button></div></header>
       <div className="setup-body">
       <section className="intro" aria-labelledby="app-title">
         <h1 id="app-title">Revisa tu movimiento<br /><span>unos segundos después.</span></h1>
@@ -121,9 +126,10 @@ export function DelayApp() {
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
       {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="m7 10 5 5 5-5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></svg>Instalar aplicación en un clic</button></div>}
       </div>
-      <div className="start-bar"><button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button></div>
+      <div className="start-bar"><button type="button" className="button secondary start-button" onClick={openClips}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m10 9 5 3-5 3z" /></svg>Tus clips{!!clips?.length && <span className="clips-count">{clips.length}</span>}</button><button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button></div>
     </div>
 
+    {view === 'clips' && !active && <Clips clips={clips} onBack={() => history.back()} />}
     <section className={`player ${active ? 'is-active' : ''}`} aria-label="Sesión de vídeo con retraso" aria-hidden={!active} onPointerDown={showControls} onFocus={showControls}>
       <video ref={video} muted playsInline aria-label={`Vídeo de la cámara con ${sessionDelay} segundos de retraso`} />
       {active && <>

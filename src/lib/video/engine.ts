@@ -207,7 +207,7 @@ export class DelayEngine {
     const oldest = this.elapsed() - this.delay - CLIP_SECONDS - 3;
     while (this.raw.length > 1 && (this.raw[0].time < oldest || this.rawBytes > CLIP_BYTES)) this.rawBytes -= this.raw.shift()!.blob.size;
   }
-  async clip(): Promise<Blob | null> {
+  async clip(): Promise<{ blob: Blob; duration: number } | null> {
     const generation = this.generation;
     const target = this.target;
     if (this.state !== 'playing' || !target || !this.header || !this.raw.length) throw new Error('Espera a que el vídeo esté en marcha para guardar un clip.');
@@ -225,15 +225,16 @@ export class DelayEngine {
     const { BlobSource, BufferTarget, canEncodeVideo, Conversion, Input, Mp4OutputFormat, Output, WEBM } = await import('mediabunny');
     if (!(await canEncodeVideo('avc'))) throw new Error('Este navegador no puede crear vídeos MP4.');
     const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+    const start = Math.max(timecode / 1000, end - CLIP_SECONDS);
     try {
       const conversion = await Conversion.init({
         input: new Input({ formats: [WEBM], source: new BlobSource(new Blob([header, bytes.subarray(from)])) }),
-        output, video: { codec: 'avc' }, trim: { start: Math.max(timecode / 1000, end - CLIP_SECONDS), end }, showWarnings: false,
+        output, video: { codec: 'avc' }, trim: { start, end }, showWarnings: false,
       });
       await conversion.execute();
     } catch { throw new Error('No se pudo convertir el clip a MP4.'); }
     if (generation !== this.generation || !output.target.buffer) return null;
-    return new Blob([output.target.buffer], { type: 'video/mp4' });
+    return { blob: new Blob([output.target.buffer], { type: 'video/mp4' }), duration: end - start };
   }
   private updated = () => { void this.drain(); };
   private mediaError = () => this.fail('El navegador no pudo reproducir el vídeo continuo. Reinicia con una calidad inferior.', true);

@@ -9,10 +9,14 @@
     "build": "node scripts/assets.mjs && next build && node scripts/service-worker.mjs",
     "start": "serve out -l 3000",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-test-module-mocks --test tests/*.test.mjs",
+    "db:setup": "node --env-file=.env.local scripts/db-setup.mjs"
   },
   "dependencies": {
+    "@clerk/backend": "^3.26.4",
     "@clerk/react": "^6.18.3",
+    "@neondatabase/serverless": "^1.2.0",
     "@sentry/nextjs": "^11.10.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",

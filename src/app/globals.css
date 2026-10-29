@@ -123,6 +123,7 @@ html[data-auth=out] .setup { visibility: hidden; }
 .login-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; }
 .login-card .wordmark { align-self: center; }
 .login-card h1 { font-size: 30px; letter-spacing: -.9px; text-align: center; margin: 28px 0 28px; }
+.login-help { color: var(--muted); font-size: 14px; text-align: center; margin: -12px 0 24px; }
 .login-card label { font-size: 14px; font-weight: 650; margin: 0 0 8px; }
 .login-card input { min-height: 52px; width: 100%; font: inherit; font-size: 16px; background: white; border: 1px solid var(--line); border-radius: 8px; padding: 0 14px; color: var(--ink); margin-bottom: 18px; }
 .login-card input:focus-visible { outline: 3px solid oklch(.55 .15 255); outline-offset: 2px; }

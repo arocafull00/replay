@@ -3,9 +3,13 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
-      "port": 3000
+      "runtimeExecutable": "vercel",
+      "runtimeArgs": [
+        "dev",
+        "--listen",
+        "3001"
+      ],
+      "port": 3001
     }
   ]
 }

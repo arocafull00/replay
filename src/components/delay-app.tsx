@@ -9,7 +9,9 @@ import { usePwa } from '@/lib/use-pwa';
 import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
 import { Clips } from '@/components/clips';
 import { addClip, useClips } from '@/lib/clips';
-import { useAuth, useClerk } from '@clerk/react';
+import { useAuth } from '@clerk/react';
+import { useUsage } from '@/lib/usage';
+import { useAppSignOut } from '@/lib/auth';
 
 const STORAGE_KEY = 'voley-delay:delay:v1';
 function readDelay(): DelaySeconds { try { const value = Number(localStorage.getItem(STORAGE_KEY)); return isDelay(value) ? value : 10; } catch { return 10; } }
@@ -39,13 +41,18 @@ export function DelayApp() {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = !['ready', 'error'].includes(state);
   const pwa = usePwa(active);
-  const { signOut } = useClerk();
+  const signOut = useAppSignOut();
   const { userId } = useAuth();
   const clips = useClips(userId);
   const [view, setView] = useState<'setup' | 'clips'>('setup');
   const onboardingSeen = useOnboardingSeen();
   const [guideOpen, setGuideOpen] = useState(false);
   const showOnboarding = (!onboardingSeen || guideOpen) && !active && view === 'setup';
+  const track = useUsage();
+  const opened = useRef(false);
+  const sessionTracked = useRef(true);
+  useEffect(() => { if (userId && !opened.current) { opened.current = true; track('open'); } }, [track, userId]);
+  useEffect(() => { if (state === 'playing' && !sessionTracked.current) { sessionTracked.current = true; track('session'); } }, [state, track]);
 
   const receive = useCallback((event: EngineEvent) => {
     if (event.type === 'state') { setState(event.state); if (event.state === 'playing') { setBlocked(false); setMessage(''); } }
@@ -82,7 +89,7 @@ export function DelayApp() {
   function start(nextQuality: Quality = quality) {
     if (!video.current || !engine.current) return;
     setMessage(''); setBlocked(false); setLowerQuality(false); setProgress(0);
-    setQuality(nextQuality); setSessionDelay(delay); showControls();
+    setQuality(nextQuality); setSessionDelay(delay); showControls(); sessionTracked.current = false;
     // Fullscreen is best effort and must be requested inside this user gesture.
     if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
     void engine.current.start({ delaySeconds: delay, quality: nextQuality, target: video.current });
@@ -101,6 +108,7 @@ export function DelayApp() {
       const clip = await engine.current.clip();
       if (!clip) return;
       await addClip(userId, clip.blob, clip.duration);
+      track('clip');
       notify('Clip guardado en Tus clips.');
     } catch (error) {
       notify(error instanceof Error ? error.message : 'No se pudo guardar el clip.');

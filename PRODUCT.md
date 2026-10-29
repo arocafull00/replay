@@ -13,7 +13,7 @@ rePlay, con r minúscula y P mayúscula, aprobado por el usuario. La marca no se
 Clara, sobria y práctica. Interfaz funcional aprobada por el usuario.
 
 ## Anti-referencias
-Sin landing comercial, paneles de estadísticas, tarjetas decorativas, animaciones de entrada ni controles de edición de vídeo.
+La pantalla de entrenamiento no incluye landing comercial, paneles de estadísticas, tarjetas decorativas, animaciones de entrada ni controles de edición de vídeo. La administración vive en `/admin`, separada del entrenamiento, con gestión de entrenadores y analíticas de uso.
 
 ## Principios
 El vídeo conserva el encuadre completo. Los estados explican qué ocurre. La cámara solo se abre por acción explícita. La calidad se comunica sin prometer capacidades no verificadas. El contenido de cámara permanece temporalmente en memoria.

@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/react';
 import { ApiError, useApi } from '@/lib/api';
 import { useAppSignOut } from '@/lib/auth';
 import { ADMIN_CACHE_KEY, readSession } from '@/lib/auth-cache';
+import { usePwa } from '@/lib/use-pwa';
 import { ShareAccessDialog, type CoachAccess } from './share-access-dialog';
 
 type Coach = { id: string; name: string; username: string; createdAt: number; lastSignInAt: number | null; lastUsedAt: number | null; banned: boolean; clips: number; sessions: number };
@@ -28,6 +29,7 @@ function lastSeen(coach: Coach) { const time = Math.max(coach.lastUsedAt ?? 0, c
 function dayLabel(day: string) { return dayFormat.format(new Date(`${day}T12:00:00`)); }
 
 export function AdminPanel() {
+  const pwa = usePwa(false);
   const api = useApi();
   const signOut = useAppSignOut();
   const { userId } = useAuth();
@@ -150,7 +152,9 @@ export function AdminPanel() {
     <div className="admin-toolbar"><div className="admin-tabs" role="group" aria-label="Secciones">
       <button type="button" aria-pressed={tab === 'coaches'} onClick={() => setTab('coaches')}>Entrenadores{users && <span className="clips-count">{users.length}</span>}</button>
       <button type="button" aria-pressed={tab === 'stats'} onClick={() => setTab('stats')}>Analíticas</button>
-    </div></div>
+    </div>
+      {pwa.canInstall && !pwa.installed && <button type="button" className="button secondary" onClick={() => void pwa.installApp()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="m7 10 5 5 5-5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></svg>Instalar aplicación</button>}
+    </div>
     {(error || failedCreation) && <div className="notice" role="alert"><p>{error || failedCreation?.error}</p><button type="button" className="button secondary" onClick={failedCreation ? () => { setEditing(failedCreation); setFailedCreation(null); setError(''); } : refresh}>{failedCreation ? 'Revisar datos' : 'Reintentar'}</button></div>}
     {tab === 'coaches'
       ? <section aria-labelledby="coaches-title">
@@ -223,7 +227,6 @@ function CoachDialog({ coach, draft, initialError = '', onCreate, onClose, onSav
         <h2 id="coach-title">{coach ? `Editar a ${coach.name || coach.username}` : 'Nuevo entrenador'}</h2>
         <label htmlFor="coach-name">Nombre</label>
         <input id="coach-name" required maxLength={80} autoComplete="off" placeholder="Ej.: Ana García" value={name} onChange={event => setName(event.target.value)} />
-        {!coach && <p className="field-help">Generaremos su usuario y contraseña. Después podrás compartirle el acceso por WhatsApp o copiar los datos.</p>}
         {coach && <>
         <label htmlFor="coach-username">Usuario</label>
         <input id="coach-username" required minLength={4} maxLength={64} pattern="[A-Za-z0-9_\-]+" autoComplete="off" autoCapitalize="none" spellCheck={false} aria-describedby="coach-username-help" placeholder="Ej.: ana_garcia" value={username} onChange={event => setUsername(event.target.value)} />

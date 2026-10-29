@@ -14,6 +14,8 @@ async function requireAccount(request: Request) {
   if (!token) throw new HttpError(401, 'Inicia sesión de nuevo.');
   const authorizedParties = [
     process.env.NEXT_PUBLIC_SITE_URL || 'https://replayapp.vercel.app',
+    // Installed PWAs and saved links still use the previous production domain.
+    'https://voley-delay.vercel.app',
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
     ...(process.env.CLERK_AUTHORIZED_PARTIES?.split(',').map(origin => origin.trim()).filter(Boolean) ?? []),
     ...(process.env.VERCEL_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:3001'] : []),

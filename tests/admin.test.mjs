@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { generateKeyPairSync, sign } from 'node:crypto';
+import { verifyToken as verifySignedToken } from '@clerk/backend';
 import ts from 'typescript';
 
 // Exercise the deployed handlers without touching Clerk accounts or production analytics.
@@ -25,6 +27,15 @@ await writeFile(join(build, 'package.json'), '{"type":"module"}');
 await compile('api');
 process.env.CLERK_SECRET_KEY = 'test-secret';
 process.env.DATABASE_URL = 'postgresql://test';
+const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const jwtKey = publicKey.export({ type: 'spki', format: 'pem' });
+function sessionToken(origin) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub: 'admin', sid: 'session-1', iss: 'https://test.clerk.accounts.dev', azp: origin, iat: now, nbf: now - 5, exp: now + 60 })).toString('base64url');
+  const unsigned = `${header}.${payload}`;
+  return `${unsigned}.${sign('RSA-SHA256', Buffer.from(unsigned), privateKey).toString('base64url')}`;
+}
 let state;
 const user = (id, role = 'coach') => ({ id, publicMetadata: { role }, firstName: id, lastName: '', username: id, banned: false, locked: false, createdAt: 0, lastSignInAt: null });
 const sqlCalls = [];
@@ -48,6 +59,7 @@ mock.module('@clerk/backend', { namedExports: {
   verifyToken: async (token, options) => {
     state.verifyOptions = options;
     if (token === 'invalid') throw new Error('Invalid token');
+    if (token.includes('.')) return verifySignedToken(token, { ...options, jwtKey });
     return { sub: state.userId, sid: 'session-1' };
   },
 } });
@@ -99,6 +111,24 @@ test('session reports the server role and verifies the allowed frontend origin',
   const response = await session.GET(request('/api/session'));
   assert.deepEqual(await response.json(), { userId: 'admin', role: 'admin', name: 'admin' });
   assert.ok(state.verifyOptions.authorizedParties.includes('https://replayapp.vercel.app'));
+});
+
+test('production accepts signed sessions from the current and installed legacy app, but rejects other origins', async () => {
+  const previous = process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = 'production';
+  try {
+    for (const origin of ['https://replayapp.vercel.app', 'https://voley-delay.vercel.app']) {
+      const response = await session.GET(request('/api/session', { token: sessionToken(origin) }));
+      assert.equal(response.status, 200, origin);
+      assert.equal((await response.json()).userId, 'admin');
+    }
+    for (const origin of ['https://untrusted.example', 'https://voley-delay.vercel.app.attacker.example', 'http://localhost:3000']) {
+      assert.equal((await session.GET(request('/api/session', { token: sessionToken(origin) }))).status, 401, origin);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = previous;
+  }
 });
 test('the user list includes pages beyond 500 users and excludes administrators', async () => {
   state.list = [user('admin', 'admin'), ...Array.from({ length: 505 }, (_, i) => user(`coach-${i}`))];

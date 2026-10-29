@@ -9,9 +9,8 @@ import { usePwa } from '@/lib/use-pwa';
 import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
 import { Clips } from '@/components/clips';
 import { addClip, useClips } from '@/lib/clips';
-import { useAuth } from '@clerk/react';
 import { useUsage } from '@/lib/usage';
-import { useAppSignOut } from '@/lib/auth';
+import { useAppSignOut, useAppUserId } from '@/lib/auth';
 
 const STORAGE_KEY = 'voley-delay:delay:v1';
 function readDelay(): DelaySeconds { try { const value = Number(localStorage.getItem(STORAGE_KEY)); return isDelay(value) ? value : 10; } catch { return 10; } }
@@ -33,6 +32,8 @@ export function DelayApp() {
   const [sessionDelay, setSessionDelay] = useState<DelaySeconds>(10);
   const [clipping, setClipping] = useState(false);
   const [clipNotice, setClipNotice] = useState('');
+  const [clipSaved, setClipSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const engine = useRef<DelayEngine | null>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -42,7 +43,7 @@ export function DelayApp() {
   const active = !['ready', 'error'].includes(state);
   const pwa = usePwa(active);
   const signOut = useAppSignOut();
-  const { userId } = useAuth();
+  const userId = useAppUserId();
   const clips = useClips(userId);
   const [view, setView] = useState<'setup' | 'clips'>('setup');
   const onboardingSeen = useOnboardingSeen();
@@ -109,6 +110,9 @@ export function DelayApp() {
       if (!clip) return;
       await addClip(userId, clip.blob, clip.duration);
       track('clip');
+      setClipSaved(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setClipSaved(false), 2000);
       notify('Clip guardado en Tus clips.');
     } catch (error) {
       notify(error instanceof Error ? error.message : 'No se pudo guardar el clip.');
@@ -147,7 +151,7 @@ export function DelayApp() {
         <div ref={toolbar} className={`player-controls ${controls || blocked || clipping ? '' : 'controls-hidden'}`} onBlur={showControls}>
           <div><strong>{sessionDelay} segundos después</strong><span>{actualQuality || 'Comprobando la cámara…'}{reduced ? ' · Calidad reducida' : ''}</span></div>
           <div className="player-actions">
-            <button className="button clip-button" onClick={() => void saveClip()} disabled={state !== 'playing' || clipping} aria-busy={clipping} aria-label={clipping ? 'Guardando clip' : `Guardar clip de los últimos ${CLIP_SECONDS} segundos`} title={`Guardar los últimos ${CLIP_SECONDS} s`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.12 15.88" /><path d="M14.47 14.48 20 20" /><path d="M8.12 8.12 12 12" /></svg><span className="clip-label">{clipping ? 'Guardando…' : 'Clip'}</span></button>
+            <button className="button clip-button" onClick={() => void saveClip()} disabled={state !== 'playing' || clipping} aria-busy={clipping} aria-label={clipping ? 'Guardando clip' : `Guardar clip de los últimos ${CLIP_SECONDS} segundos`} title={`Guardar los últimos ${CLIP_SECONDS} s`}>{clipping ? <svg className="clip-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56" /></svg> : clipSaved ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.12 15.88" /><path d="M14.47 14.48 20 20" /><path d="M8.12 8.12 12 12" /></svg>}<span className="clip-label">{clipping ? 'Guardando…' : clipSaved ? 'Guardado' : 'Clip'}</span></button>
             <button className="button stop-button" onClick={stop}><span aria-hidden="true">■</span> Detener</button>
           </div>
         </div>

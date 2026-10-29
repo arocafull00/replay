@@ -22,7 +22,9 @@ pnpm build
 pnpm start
 ```
 
-`pnpm start` sirve la exportación de producción en localhost:3000.
+`pnpm dev` arranca Vercel Dev en http://localhost:3000 y sirve tanto Next.js como las funciones de `api/`. La primera vez requiere iniciar sesión con `pnpm exec vercel login` y vincular el proyecto con `pnpm exec vercel link`. Copiar `.env.example` a `.env.local` y configurar las claves de Clerk y Neon.
+
+`pnpm dev:web` arranca solo Next.js, sin las funciones de `api/`; las llamadas de sesión y administración devolverán 404. `pnpm start` sirve únicamente la exportación de producción en localhost:3000.
 
 El servidor de desarrollo utiliza `.next-dev/` y las compilaciones de producción `.next/` (la exportación sigue en `out/`). Así se puede ejecutar `pnpm build` mientras está abierto el servidor sin sobrescribir sus archivos ni provocar un bucle de recargas.
 
@@ -91,7 +93,7 @@ En **User & authentication**, habilitar nombre, usuario y contraseña (el correo
 - Los datos del panel y la cola de eventos pertenecen a una cuenta concreta y se limpian al cerrar sesión. Los clips guardados son archivos del usuario, no caché: permanecen en su dispositivo y separados por cuenta.
 - Los eventos llevan un identificador estable: los reintentos al recuperar conexión no duplican el conteo. El panel permite actualizar manualmente y se refresca cada minuto mientras está visible.
 - Esquema de la base de datos en `scripts/schema.sql`; se aplica con `pnpm db:setup` (lee `.env.local`).
-- Para probar las funciones en local: `vercel dev --listen 3001` (`pnpm dev` no sirve `api/`).
+- Para probar las funciones en local: `pnpm dev` (Next.js y `api/` en el mismo origen).
 - `pnpm test` usa el runner de Node con Clerk y Neon simulados para probar permisos, sesiones revocadas, gestión de entrenadores, paginación y validación de eventos, sin alterar cuentas ni métricas reales.
 
 ## Validación y mantenimiento

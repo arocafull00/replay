@@ -9,6 +9,11 @@ export function useAppSignOut() {
   const { signOut } = useClerk();
   return useCallback(async () => { clearSession(); await signOut(); }, [signOut]);
 }
+export function useAppUserId() {
+  const { isLoaded, userId } = useAuth();
+  const identity = useSyncExternalStore(subscribe, readIdentity, () => null);
+  return isLoaded ? userId : identity ? (JSON.parse(identity) as CachedSession).userId : null;
+}
 export function useAppSession() {
   const { isLoaded, isSignedIn, userId } = useAuth();
   const { user } = useUser();

@@ -8,6 +8,7 @@ import { ApiError, useApi } from '@/lib/api';
 import { useAppSignOut } from '@/lib/auth';
 import { ADMIN_CACHE_KEY, readSession } from '@/lib/auth-cache';
 import { usePwa } from '@/lib/use-pwa';
+import { InstallApp } from '@/components/install-app';
 import { ShareAccessDialog, type CoachAccess } from './share-access-dialog';
 
 type Coach = { id: string; name: string; username: string; email: string; createdAt: number; lastSignInAt: number | null; lastUsedAt: number | null; banned: boolean; clips: number; sessions: number };
@@ -153,7 +154,7 @@ export function AdminPanel() {
       <button type="button" aria-pressed={tab === 'coaches'} onClick={() => setTab('coaches')}>Entrenadores{users && <span className="clips-count">{users.length}</span>}</button>
       <button type="button" aria-pressed={tab === 'stats'} onClick={() => setTab('stats')}>Analíticas</button>
     </div>
-      {pwa.canInstall && !pwa.installed && <button type="button" className="button secondary" onClick={() => void pwa.installApp()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="m7 10 5 5 5-5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></svg>Instalar aplicación</button>}
+      <InstallApp pwa={pwa} />
     </div>
     {(error || failedCreation) && <div className="notice" role="alert"><p>{error || failedCreation?.error}</p><button type="button" className="button secondary" onClick={failedCreation ? () => { setEditing(failedCreation); setFailedCreation(null); setError(''); } : refresh}>{failedCreation ? 'Revisar datos' : 'Reintentar'}</button></div>}
     {tab === 'coaches'

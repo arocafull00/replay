@@ -1,22 +1,19 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-type InstallEvent = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> };
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { clearInstallPrompt, getInstallPrompt, subscribeInstallPrompt } from '@/lib/pwa-install';
 export function usePwa(active: boolean) {
   const busy = useRef(active);
   const [offlineReady, setOfflineReady] = useState(false);
   const [offlineError, setOfflineError] = useState(false);
-  const [install, setInstall] = useState<InstallEvent | null>(null);
+  const install = useSyncExternalStore(subscribeInstallPrompt, getInstallPrompt, () => null);
   const [installed, setInstalled] = useState(false);
   const registration = useRef<ServiceWorkerRegistration | null>(null);
   useEffect(() => { busy.current = active; if (!active) registration.current?.waiting?.postMessage({ type: 'ACTIVATE_WHEN_IDLE' }); }, [active]);
   useEffect(() => {
     const media = matchMedia('(display-mode: standalone)');
-    const standalone = () => setInstalled(media.matches || !!(navigator as Navigator & { standalone?: boolean }).standalone);
+    const standalone = () => setInstalled(!!window.__replayAppInstalled || media.matches || !!(navigator as Navigator & { standalone?: boolean }).standalone);
     standalone();
-    const capture = (event: Event) => { event.preventDefault(); setInstall(event as InstallEvent); };
-    const installedEvent = () => { setInstalled(true); setInstall(null); };
-    window.addEventListener('beforeinstallprompt', capture);
-    window.addEventListener('appinstalled', installedEvent);
+    window.addEventListener('replay:installchange', standalone);
     media.addEventListener('change', standalone);
     let disposed = false;
     let checkTimer: ReturnType<typeof setTimeout> | undefined;
@@ -52,14 +49,17 @@ export function usePwa(active: boolean) {
     }
     return () => {
       disposed = true; clearTimeout(checkTimer);
-      window.removeEventListener('beforeinstallprompt', capture); window.removeEventListener('appinstalled', installedEvent);
+      window.removeEventListener('replay:installchange', standalone);
       media.removeEventListener('change', standalone); window.removeEventListener('online', online);
       navigator.serviceWorker?.removeEventListener('controllerchange', check); navigator.serviceWorker?.removeEventListener('message', status);
     };
   }, []);
   async function installApp() {
-    if (!install) return;
-    await install.prompt(); await install.userChoice; setInstall(null);
+    // Read at click time too: Chrome may have emitted the event since the last render.
+    const prompt = getInstallPrompt();
+    if (!prompt) return false;
+    try { await prompt.prompt(); await prompt.userChoice; return true; }
+    finally { clearInstallPrompt(prompt); }
   }
   return { offlineReady, offlineError, canInstall: !!install, installed, installApp };
 }

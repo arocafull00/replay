@@ -88,6 +88,14 @@ select { min-height: 48px; width: 100%; text-align-last: center; background: whi
 .notice .button { margin-top: 16px; }
 h2 { font-size: 18px; font-weight: 700; }
 .installation-actions { position: absolute; left: 0; right: 0; bottom: 24px; text-align: center; }
+.install-app-button svg { flex-shrink: 0; }
+.install-app-button:disabled { cursor: default; }
+.install-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; text-align: left; }
+.install-dialog label { display: block; margin: 20px 0 8px; font-size: 14px; font-weight: 650; }
+.install-dialog select { text-align-last: left; }
+.install-dialog ol { margin: 20px 0 0; padding: 0; font-size: 15px; }
+.install-dialog li { padding: 0; }
+.install-dialog li + li { margin-top: 12px; }
 summary { min-height: 52px; padding: 14px 24px 14px 0; font-size: 14px; font-weight: 600; }
 .player { display: none; }
 .player.is-active { display: block; position: fixed; inset: 0; background: black; color: white; overflow: hidden; }

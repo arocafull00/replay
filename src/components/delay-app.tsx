@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { DelayEngine, type EngineEvent, type EngineState } from '@/lib/video/engine';
 import { CLIP_SECONDS, DELAYS, isDelay, PROFILES, type DelaySeconds, type Quality } from '@/lib/video/policy';
 import { usePwa } from '@/lib/use-pwa';
+import { InstallApp } from '@/components/install-app';
 import { Onboarding, useOnboardingSeen } from '@/components/onboarding/onboarding';
 import { Clips } from '@/components/clips';
 import { addClip, useClips } from '@/lib/clips';
@@ -136,7 +137,7 @@ export function DelayApp() {
         </div>
       </section>
       {!active && message && <div className="notice" role={state === 'error' ? 'alert' : 'status'}><p>{message}</p>{lowerQuality && quality < 2 && <button className="button secondary" onClick={() => start((quality + 1) as Quality)}>Reiniciar con menor calidad</button>}</div>}
-      {pwa.canInstall && !pwa.installed && <div className="installation-actions"><button className="button secondary" onClick={() => void pwa.installApp()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="m7 10 5 5 5-5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></svg>Instalar aplicación en un clic</button></div>}
+      <div className="installation-actions"><InstallApp pwa={pwa} /></div>
       </div>
       <div className="start-bar"><button type="button" className="button secondary start-button" onClick={openClips}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m10 9 5 3-5 3z" /></svg>Tus clips{!!clips?.length && <span className="clips-count">{clips.length}</span>}</button><button className="button primary start-button" onClick={() => start()}><span aria-hidden="true">▶</span> Iniciar</button></div>
     </div>

@@ -45,6 +45,13 @@ for (const [index, frame] of frames.entries()) {
 await writeFile('public/favicon.ico', Buffer.concat([directory, ...frames]));
 await rm('public/mark.svg', { force: true });
 
-const og = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#f5f7f5"/><rect x="60" y="60" width="1080" height="510" rx="24" fill="#24542b"/><text x="110" y="215" fill="white" font-family="Arial" font-size="76" font-weight="bold">rePlay</text><text x="110" y="315" fill="white" font-family="Arial" font-size="42">Mira tu movimiento unos segundos después.</text><text x="110" y="465" fill="#daecdd" font-family="Arial" font-size="30">Cámara local · Sin audio · Sin grabaciones guardadas</text></svg>`;
-const ogIcon = await icon(140).toBuffer();
-await sharp(Buffer.from(og)).composite([{ input: ogIcon, left: 935, top: 110 }]).png().toFile('public/og.png');
+// Keep the whole brand in the central square: chat previews crop the landscape
+// image to a small thumbnail, where a tagline would be unreadable.
+const og = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="${background}"/><text x="600" y="552" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="bold">rePlay</text></svg>`;
+const ogIcon = await icon(380).toBuffer();
+const ogImage = await sharp(Buffer.from(og))
+  .composite([{ input: ogIcon, left: 410, top: 60 }]).png().toBuffer();
+await Promise.all([
+  writeFile('public/og.png', ogImage),
+  writeFile('public/replay-share-v2.png', ogImage),
+]);

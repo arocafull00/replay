@@ -36,7 +36,7 @@ const STEPS: Step[] = [
 const DELAY_HINTS: Record<DelaySeconds, string> = { 5: 'Estás justo al lado del móvil', 10: 'A unos pasos · el más habitual', 15: 'Al otro lado de la pista', 20: 'Ejercicios con desplazamiento', 30: 'Jugadas largas o campo grande' };
 const BUNCH: Sport[] = ['football', 'volleyball', 'basketball', 'tennis'];
 
-type Pwa = { canInstall: boolean; installed: boolean; offlineReady: boolean; installApp: () => Promise<void> };
+type Pwa = { canInstall: boolean; installed: boolean; offlineReady: boolean; installApp: () => Promise<boolean | void> };
 type Props = { pwa: Pwa; delay: DelaySeconds; onDelay: (value: DelaySeconds) => void; onClose: () => void };
 
 function platform() {

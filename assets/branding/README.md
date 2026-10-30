@@ -8,7 +8,9 @@ Dirección aprobada: C · Retorno con deportista. Contenedor grafito, cinta sati
 
 `node scripts/assets.mjs` exporta los recursos a `public/`: marca de cabecera de 96 px, iconos PWA de 192/512 px, variante maskable opaca de 512 px, Apple touch opaco de 180 px, favicon SVG/PNG e ICO de 16/32/48 px, e imagen social de 1200 × 630. `pnpm build` ejecuta este generador antes de Next.js y regenera la precaché por hash después.
 
-Las referencias activas utilizan `v=athlete-1`. El service worker resuelve los archivos precargados por pathname, también cuando la petición incluye esa versión. Cambiar el arte exige regenerar y actualizar esa versión en metadata, manifest y cabecera.
+Las referencias de los iconos utilizan `v=athlete-1`. El service worker resuelve los archivos precargados por pathname, también cuando la petición incluye esa versión. Cambiar el arte de los iconos exige regenerar y actualizar esa versión en metadata, manifest y cabecera.
+
+La imagen social utiliza `/replay-share-v2.png` (1200 × 630), con icono y marca dentro del cuadrado central para conservarlos al recortar las miniaturas de WhatsApp. Evita texto pequeño en la imagen: la descripción ya aparece en los metadatos. Al cambiar la imagen social, cambia también su nombre en el generador y los metadatos para renovar las cachés externas. `/og.png` se sigue generando para los enlaces anteriores.
 
 La variante maskable sitúa el icono en 384 × 384 sobre fondo grafito de 512 × 512 para mantener el símbolo en la zona segura circular. No cambiar el identificador de instalación ni las claves de preferencias al cambiar el icono.
 

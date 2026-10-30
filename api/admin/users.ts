@@ -15,10 +15,18 @@ const CLERK_ERRORS: Record<string, string> = {
 
 type Usage = { user_id: string; clips: number; sessions: number; last_used: string };
 
+const EMAIL_ERRORS: Record<string, string> = {
+  form_identifier_exists: 'Ese correo ya lo usa otra cuenta.',
+  form_param_format_invalid: 'Escribe un correo válido.',
+};
+
 async function clerkCall<T>(run: () => Promise<T>) {
   try { return await run(); }
   catch (error) {
-    if (isClerkAPIResponseError(error)) throw new HttpError(422, CLERK_ERRORS[(error as ClerkAPIResponseError).errors[0]?.code ?? ''] ?? 'No se ha podido guardar. Revisa los datos.');
+    if (isClerkAPIResponseError(error)) {
+      const { code = '', meta } = (error as ClerkAPIResponseError).errors[0] ?? {};
+      throw new HttpError(422, (meta?.paramName === 'email_address' ? EMAIL_ERRORS[code] : undefined) ?? CLERK_ERRORS[code] ?? 'No se ha podido guardar. Revisa los datos.');
+    }
     throw error;
   }
 }
@@ -26,7 +34,7 @@ async function clerkCall<T>(run: () => Promise<T>) {
 async function readBody(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'Petición no válida.');
-  return body as { id?: string; name?: string; username?: string; password?: string; banned?: boolean };
+  return body as { id?: string; name?: string; username?: string; password?: string; email?: string; banned?: boolean };
 }
 
 async function coach(id: unknown) {
@@ -45,6 +53,12 @@ function name(value: unknown) {
 function password(value: unknown) {
   if (typeof value !== 'string' || value.length < 8 || value.length > 1024) throw new HttpError(400, 'La contraseña debe tener entre 8 y 1024 caracteres.');
   return value;
+}
+
+function email(value: unknown) {
+  const text = typeof value === 'string' ? value.trim().toLowerCase() : null;
+  if (text === null || (text && (text.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)))) throw new HttpError(400, 'Escribe un correo válido o déjalo vacío.');
+  return text;
 }
 
 function validateUsername(value: unknown) {
@@ -76,7 +90,7 @@ export const GET = handle(async request => {
   const byUser = new Map((usage as Usage[]).map(row => [row.user_id, row]));
   const users = data.filter(user => !isAdmin(user)).map(user => {
     const row = byUser.get(user.id);
-    return { id: user.id, name: [user.firstName, user.lastName].filter(Boolean).join(' '), username: user.username ?? '', createdAt: user.createdAt, lastSignInAt: user.lastSignInAt, lastUsedAt: row ? Date.parse(row.last_used) : null, banned: user.banned, clips: row?.clips ?? 0, sessions: row?.sessions ?? 0 };
+    return { id: user.id, name: [user.firstName, user.lastName].filter(Boolean).join(' '), username: user.username ?? '', email: user.primaryEmailAddress?.emailAddress ?? '', createdAt: user.createdAt, lastSignInAt: user.lastSignInAt, lastUsedAt: row ? Date.parse(row.last_used) : null, banned: user.banned, clips: row?.clips ?? 0, sessions: row?.sessions ?? 0 };
   });
   return Response.json({ users });
 });
@@ -88,12 +102,13 @@ export const POST = handle(async request => {
   const automaticUsername = body.username === undefined;
   const base = automaticUsername ? usernameFromName(firstName) : validateUsername(body.username);
   const initialPassword = body.password === undefined ? `${randomBytes(12).toString('base64url')}aA7!` : password(body.password);
+  const initialEmail = body.email === undefined ? '' : email(body.email);
   let username = base;
   const user = await clerkCall(async () => {
     for (let attempt = 0; ; attempt += 1) {
-      try { return await clerk.users.createUser({ firstName, username, password: initialPassword, publicMetadata: { role: 'coach' } }); }
+      try { return await clerk.users.createUser({ firstName, username, password: initialPassword, ...(initialEmail && { emailAddress: [initialEmail] }), publicMetadata: { role: 'coach' } }); }
       catch (error) {
-        if (!automaticUsername || attempt >= 3 || !isClerkAPIResponseError(error) || error.errors[0]?.code !== 'form_identifier_exists') throw error;
+        if (!automaticUsername || attempt >= 3 || !isClerkAPIResponseError(error) || error.errors[0]?.code !== 'form_identifier_exists' || error.errors[0]?.meta?.paramName === 'email_address') throw error;
         username = `${base}_${randomBytes(3).toString('hex')}`;
       }
     }
@@ -109,7 +124,12 @@ export const PATCH = handle(async request => {
   const firstName = body.name === undefined ? undefined : name(body.name);
   const username = body.username === undefined ? undefined : validateUsername(body.username);
   const nextPassword = body.password === undefined ? undefined : password(body.password);
+  const nextEmail = body.email === undefined ? undefined : email(body.email);
   const user = await coach(body.id);
+  if (nextEmail !== undefined && nextEmail !== (user.primaryEmailAddress?.emailAddress ?? '')) {
+    const added = nextEmail ? await clerkCall(() => clerk.emailAddresses.createEmailAddress({ userId: user.id, emailAddress: nextEmail, verified: true, primary: true })) : null;
+    await Promise.all(user.emailAddresses.filter(address => address.id !== added?.id).map(address => clerk.emailAddresses.deleteEmailAddress(address.id)));
+  }
   if (firstName !== undefined || username !== undefined || nextPassword !== undefined) await clerkCall(() => clerk.users.updateUser(user.id, { ...(firstName !== undefined && { firstName, lastName: '' }), ...(username !== undefined && { username }), ...(nextPassword !== undefined && { password: nextPassword, signOutOfOtherSessions: true }) }));
   if (body.banned === true && !user.banned) await clerkCall(() => clerk.users.banUser(user.id));
   if (body.banned === false && user.banned) await clerkCall(() => clerk.users.unbanUser(user.id));

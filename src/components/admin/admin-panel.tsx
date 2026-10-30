@@ -10,12 +10,12 @@ import { ADMIN_CACHE_KEY, readSession } from '@/lib/auth-cache';
 import { usePwa } from '@/lib/use-pwa';
 import { ShareAccessDialog, type CoachAccess } from './share-access-dialog';
 
-type Coach = { id: string; name: string; username: string; createdAt: number; lastSignInAt: number | null; lastUsedAt: number | null; banned: boolean; clips: number; sessions: number };
+type Coach = { id: string; name: string; username: string; email: string; createdAt: number; lastSignInAt: number | null; lastUsedAt: number | null; banned: boolean; clips: number; sessions: number };
 type Day = { day: string; clips: number; sessions: number; opens: number };
 type Stats = { totals: { clips: number; sessions: number; opens: number; active: number }; days: Day[] };
 type Data = { users?: Coach[]; stats?: Stats };
 type Metric = 'clips' | 'sessions' | 'opens';
-type CoachDraft = { name: string };
+type CoachDraft = { name: string; email: string };
 type Editing = { coach: Coach | null; draft?: CoachDraft; error?: string } | null;
 
 const METRICS: { key: Metric; label: string }[] = [{ key: 'clips', label: 'Clips' }, { key: 'sessions', label: 'Sesiones' }, { key: 'opens', label: 'Aperturas' }];
@@ -96,14 +96,14 @@ export function AdminPanel() {
     }
   }
   async function create(draft: CoachDraft) {
-    const optimistic: Coach = { id: `pending-${crypto.randomUUID()}`, name: draft.name.trim(), username: '', createdAt: Date.now(), lastSignInAt: null, lastUsedAt: null, banned: false, clips: 0, sessions: 0 };
+    const optimistic: Coach = { id: `pending-${crypto.randomUUID()}`, name: draft.name.trim(), username: '', email: draft.email.trim().toLowerCase(), createdAt: Date.now(), lastSignInAt: null, lastUsedAt: null, banned: false, clips: 0, sessions: 0 };
     mutationVersion.current += 1;
     setError('');
     setFailedCreation(null);
     setPendingCreations(previous => [...previous, optimistic]);
     setEditing(null);
     try {
-      const { id, username, password } = await api<{ id: string; username: string; password: string }>('/api/admin/users', 'POST', draft);
+      const { id, username, password } = await api<{ id: string; username: string; password: string }>('/api/admin/users', 'POST', { name: draft.name, ...(draft.email.trim() && { email: draft.email }) });
       setData(previous => ({ ...previous, users: previous.users?.some(coach => coach.id === id) ? previous.users : [...(previous.users ?? []), { ...optimistic, id, username }] }));
       setAccess({ name: optimistic.name, username, password });
       setVersion(value => value + 1);
@@ -203,6 +203,7 @@ function CoachDialog({ coach, draft, initialError = '', onCreate, onClose, onSav
   const dialog = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState(coach?.name ?? draft?.name ?? '');
   const [username, setUsername] = useState(coach?.username ?? '');
+  const [email, setEmail] = useState(coach?.email ?? draft?.email ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(initialError);
@@ -212,10 +213,10 @@ function CoachDialog({ coach, draft, initialError = '', onCreate, onClose, onSav
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
-    if (!coach) { onCreate({ name }); return; }
+    if (!coach) { onCreate({ name, email }); return; }
     setSaving(true); setError('');
     try {
-      await api('/api/admin/users', 'PATCH', { id: coach.id, ...(name.trim() !== coach.name && { name }), ...(username.trim().toLowerCase() !== coach.username && { username }), ...(password && { password }) });
+      await api('/api/admin/users', 'PATCH', { id: coach.id, ...(name.trim() !== coach.name && { name }), ...(username.trim().toLowerCase() !== coach.username && { username }), ...(email.trim().toLowerCase() !== coach.email && { email }), ...(password && { password }) });
       onSaved(password ? { name: name.trim(), username: username.trim().toLowerCase(), password } : undefined);
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'No se ha podido guardar.'); }
     finally { setSaving(false); }
@@ -227,6 +228,9 @@ function CoachDialog({ coach, draft, initialError = '', onCreate, onClose, onSav
         <h2 id="coach-title">{coach ? `Editar a ${coach.name || coach.username}` : 'Nuevo entrenador'}</h2>
         <label htmlFor="coach-name">Nombre</label>
         <input id="coach-name" required maxLength={80} autoComplete="off" placeholder="Ej.: Ana García" value={name} onChange={event => setName(event.target.value)} />
+        <label htmlFor="coach-email">Correo (opcional)</label>
+        <input id="coach-email" type="email" maxLength={254} autoComplete="off" autoCapitalize="none" spellCheck={false} aria-describedby="coach-email-help" placeholder="Ej.: ana@gmail.com" value={email} onChange={event => setEmail(event.target.value)} />
+        <p id="coach-email-help" className="field-help">Con él podrá recuperar la contraseña por su cuenta. Sin correo, tendrás que cambiársela tú.</p>
         {coach && <>
         <label htmlFor="coach-username">Usuario</label>
         <input id="coach-username" required minLength={4} maxLength={64} pattern="[A-Za-z0-9_\-]+" autoComplete="off" autoCapitalize="none" spellCheck={false} aria-describedby="coach-username-help" placeholder="Ej.: ana_garcia" value={username} onChange={event => setUsername(event.target.value)} />

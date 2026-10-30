@@ -37,7 +37,7 @@ function sessionToken(origin) {
   return `${unsigned}.${sign('RSA-SHA256', Buffer.from(unsigned), privateKey).toString('base64url')}`;
 }
 let state;
-const user = (id, role = 'coach') => ({ id, publicMetadata: { role }, firstName: id, lastName: '', username: id, banned: false, locked: false, createdAt: 0, lastSignInAt: null });
+const user = (id, role = 'coach') => ({ id, publicMetadata: { role }, firstName: id, lastName: '', username: id, emailAddresses: [], primaryEmailAddress: null, banned: false, locked: false, createdAt: 0, lastSignInAt: null });
 const sqlCalls = [];
 const clerk = {
   users: {
@@ -51,6 +51,10 @@ const clerk = {
     banUser: async id => { state.banned = id; },
     unbanUser: async id => { state.unbanned = id; },
     deleteUser: async id => { state.deleted = id; },
+  },
+  emailAddresses: {
+    createEmailAddress: async params => { state.emailCreated = params; return { id: 'email-new' }; },
+    deleteEmailAddress: async id => { (state.emailsDeleted ??= []).push(id); },
   },
   sessions: { getSession: async () => ({ status: state.sessionStatus, userId: state.userId }) },
 };
@@ -244,6 +248,42 @@ test('editing an existing username returns a useful error', async context => {
   const response = await users.PATCH(request('/api/admin/users', { method: 'PATCH', body: { id: 'coach', username: 'taken_coach' } }));
   assert.equal(response.status, 422);
   assert.deepEqual(await response.json(), { error: 'Ese usuario ya existe.' });
+});
+
+test('creation stores an optional email and rejects malformed ones', async () => {
+  assert.equal((await users.POST(request('/api/admin/users', { method: 'POST', body: { name: 'Ana', email: 'not-an-email' } }))).status, 400);
+  assert.equal(state.created, undefined);
+  await users.POST(request('/api/admin/users', { method: 'POST', body: { name: 'Ana', email: ' Ana@Example.COM ' } }));
+  assert.deepEqual(state.created.emailAddress, ['ana@example.com']);
+  await users.POST(request('/api/admin/users', { method: 'POST', body: { name: 'Ana', email: '' } }));
+  assert.equal(state.created.emailAddress, undefined);
+});
+
+test('a taken email is reported without retrying with another username', async context => {
+  let calls = 0;
+  context.mock.method(clerk.users, 'createUser', async () => { calls += 1; throw { clerkError: true, errors: [{ code: 'form_identifier_exists', meta: { paramName: 'email_address' } }] }; });
+  const response = await users.POST(request('/api/admin/users', { method: 'POST', body: { name: 'Ana', email: 'ana@example.com' } }));
+  assert.equal(response.status, 422);
+  assert.deepEqual(await response.json(), { error: 'Ese correo ya lo usa otra cuenta.' });
+  assert.equal(calls, 1);
+});
+
+test('editing replaces or removes the email and leaves it alone when unchanged', async () => {
+  const coach = state.users.get('coach');
+  coach.emailAddresses = [{ id: 'email-old', emailAddress: 'old@example.com' }];
+  coach.primaryEmailAddress = coach.emailAddresses[0];
+  await users.PATCH(request('/api/admin/users', { method: 'PATCH', body: { id: 'coach', email: 'OLD@example.com' } }));
+  assert.equal(state.emailCreated, undefined);
+  assert.equal(state.emailsDeleted, undefined);
+  await users.PATCH(request('/api/admin/users', { method: 'PATCH', body: { id: 'coach', email: 'new@example.com' } }));
+  assert.deepEqual(state.emailCreated, { userId: 'coach', emailAddress: 'new@example.com', verified: true, primary: true });
+  assert.deepEqual(state.emailsDeleted, ['email-old']);
+  state.emailCreated = undefined;
+  state.emailsDeleted = undefined;
+  await users.PATCH(request('/api/admin/users', { method: 'PATCH', body: { id: 'coach', email: '' } }));
+  assert.equal(state.emailCreated, undefined);
+  assert.deepEqual(state.emailsDeleted, ['email-old']);
+  assert.equal((await users.PATCH(request('/api/admin/users', { method: 'PATCH', body: { id: 'coach', email: 'bad@' } }))).status, 400);
 });
 
 test('events use the authenticated account and stable ids for idempotent retries', async () => {

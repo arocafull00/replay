@@ -4,6 +4,7 @@
   "outputDirectory": "out",
   "devCommand": "pnpm dev:web --port $PORT",
   "cleanUrls": true,
+  "rewrites": [{ "source": "/__clerk/:path*", "destination": "/api/clerk-proxy?__path=:path*" }],
   "headers": [
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }, { "key": "Service-Worker-Allowed", "value": "/" }] },
     { "source": "/(.*)", "headers": [

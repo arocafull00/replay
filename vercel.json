@@ -4,7 +4,7 @@
   "outputDirectory": "out",
   "devCommand": "pnpm dev:web --port $PORT",
   "cleanUrls": true,
-  "redirects": [{ "source": "/:path*", "has": [{ "type": "host", "value": "voley-delay.vercel.app" }], "destination": "https://replayapp.vercel.app/:path*", "permanent": true }],
+  "redirects": [{ "source": "/(.*)", "has": [{ "type": "host", "value": "voley-delay.vercel.app" }], "destination": "https://replayapp.vercel.app/$1", "permanent": true }],
   "rewrites": [{ "source": "/__clerk/:__path*", "destination": "/api/clerk-proxy?__path=:__path*" }],
   "headers": [
     { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }, { "key": "Service-Worker-Allowed", "value": "/" }] },
